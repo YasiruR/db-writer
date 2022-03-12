@@ -2,15 +2,18 @@ package main
 
 import (
 	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/neo4j"
 	"github.com/YasiruR/db-writer/redis"
 )
 
 func main() {
-	db, addr, pw, file, uniqueKey := parseArg()
-	uniqIdx, _, values := readData(file, uniqueKey)
+	dbCfg, dataCfg, file := parseArg()
+	fields, values := readData(file, &dataCfg)
 
-	switch db {
+	switch dbCfg.Typ {
 	case generic.Redis:
-		redis.Client().Init(addr, pw).Write(values, generic.Options{UniqIdx: uniqIdx})
+		redis.Client().Init(dbCfg).Write(fields, values, dataCfg)
+	case generic.Neo4j:
+		neo4j.Client().Init(dbCfg).Write(fields, values, dataCfg)
 	}
 }

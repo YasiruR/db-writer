@@ -1,11 +1,14 @@
 package redis
 
 import (
+	"errors"
+	"fmt"
 	"github.com/YasiruR/db-writer/generic"
 	goRedis "github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	traceableContext "github.com/tryfix/traceable-context"
-	"log"
+	"sync"
+	"sync/atomic"
 )
 
 type redis struct {
@@ -27,15 +30,42 @@ func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
 	return r
 }
 
-func (r *redis) Write(_ []string, values [][]string, opt generic.Options) {
-	if opt.UniqIdx < 0 {
-		log.Fatalln(`no unique id to store as key`)
+type redisVal struct {
+	body []string
+}
+
+func (v redisVal) MarshalBinary() ([]byte, error) {
+	return []byte(fmt.Sprintf("%v", v)), nil
+}
+
+func (r *redis) Write(_ []string, values [][]string, dataCfg generic.DataConfigs) {
+	if dataCfg.UniqIdx < 0 {
+		generic.Fatal(errors.New(`no unique id to store as key`))
 	}
 
 	ctx := traceableContext.WithUUID(uuid.New())
-	for _, val := range values {
-		go func(val []string) {
-			r.db.Set(ctx, val[opt.UniqIdx], val, opt.Expiry) // check expiry
-		}(val)
+	wg := &sync.WaitGroup{}
+	var success uint64
+
+	for i, val := range values {
+		if dataCfg.Limit >= 0 && dataCfg.Limit == i {
+			break
+		}
+
+		rv := redisVal{body: val}
+		wg.Add(1)
+
+		go func(val []string, wg *sync.WaitGroup) {
+			defer wg.Done()
+			cmd := r.db.Set(ctx, val[dataCfg.UniqIdx], rv, 0) // check expiry
+			if cmd.Err() != nil {
+				generic.Error(cmd.Err())
+				return
+			}
+			atomic.AddUint64(&success, 1)
+		}(val, wg)
 	}
+
+	wg.Wait()
+	fmt.Println(`total writes (redis): `, int(success))
 }

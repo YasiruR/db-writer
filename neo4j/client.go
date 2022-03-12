@@ -30,7 +30,7 @@ func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
 	return n
 }
 
-func (n *neo4j) Write(fields []string, values [][]string, _ generic.Options) {
+func (n *neo4j) Write(fields []string, values [][]string, _ generic.DataConfigs) {
 	var failed uint64
 	n.setTx(fields)
 
