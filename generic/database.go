@@ -10,8 +10,14 @@ const (
 )
 
 type Database interface {
-	Init(addr, pw string) Database
-	Write(values [][]string, opt Options)
+	Init(cfg DBConfigs) Database
+	Write(fields []string, values [][]string, opt Options)
+}
+
+type DBConfigs struct {
+	Addr     string
+	Username string
+	Passwd   string
 }
 
 type Options struct {

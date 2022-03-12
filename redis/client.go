@@ -16,10 +16,10 @@ func Client() generic.Database {
 	return &redis{}
 }
 
-func (r *redis) Init(addr, pw string) generic.Database {
+func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
 	db := goRedis.NewClient(&goRedis.Options{
-		Addr:     addr,
-		Password: pw,
+		Addr:     cfg.Addr,
+		Password: cfg.Passwd,
 		DB:       0,
 	})
 
@@ -27,7 +27,7 @@ func (r *redis) Init(addr, pw string) generic.Database {
 	return r
 }
 
-func (r *redis) Write(values [][]string, opt generic.Options) {
+func (r *redis) Write(_ []string, values [][]string, opt generic.Options) {
 	if opt.UniqIdx < 0 {
 		log.Fatalln(`no unique id to store as key`)
 	}
