@@ -4,25 +4,28 @@ import "time"
 
 // database types
 const (
-	Redis     = `redis`
-	Neo4j     = `neo4j`
-	Couchbase = `couchbase`
+	Redis         = `redis`
+	Neo4j         = `neo4j`
+	ElasticSearch = `elasticsearch`
+	Couchbase     = `couchbase`
 )
 
 type Database interface {
 	Init(cfg DBConfigs) Database
-	Write(fields []string, values [][]string, cfg DataConfigs)
+	Write(values [][]string, cfg DataConfigs)
 }
 
 type DBConfigs struct {
 	Typ      string
-	Addr     string
+	Addr     string //todo list of hosts
 	Username string
 	Passwd   string
+	CACert   string
 }
 
 type DataConfigs struct {
-	UniqKey string
+	Fields  []string
+	UniqKey string // todo combine
 	UniqIdx int
 	Limit   int
 }

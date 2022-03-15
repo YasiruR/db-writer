@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/YasiruR/db-writer/generic"
+	log2 "github.com/YasiruR/db-writer/log"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
@@ -16,6 +17,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 	data := flag.String(`csv`, ``, `csv file path`)
 	key := flag.String(`unique`, ``, `unique key identifier`)
 	limit := flag.Int(`limit`, -1, `number of data items [maximum if not defined]`)
+	caCert := flag.String(`ca`, ``, `CA certificate for elasticsearch`)
 
 	flag.Parse()
 
@@ -27,7 +29,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		log.Fatalln(`unique key field should be provided for redis`)
 	}
 
-	if *db != generic.Redis && *db != generic.Neo4j && *db != generic.Couchbase {
+	if *db != generic.Redis && *db != generic.Neo4j && *db != generic.ElasticSearch {
 		log.Fatalln(`invalid database type`)
 	}
 
@@ -36,7 +38,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		pw = getPw()
 	}
 
-	return generic.DBConfigs{Typ: *db, Addr: *hostAddr, Passwd: pw}, generic.DataConfigs{UniqKey: *key, Limit: *limit}, *data
+	return generic.DBConfigs{Typ: *db, Addr: *hostAddr, Passwd: pw, CACert: *caCert}, generic.DataConfigs{UniqKey: *key, Limit: *limit}, *data
 }
 
 func getPw() (pw string) {
@@ -44,7 +46,7 @@ func getPw() (pw string) {
 
 	raw, err := terminal.MakeRaw(0)
 	if err != nil {
-		generic.Fatal(err)
+		log2.Fatal(err)
 	}
 	defer terminal.Restore(0, raw)
 
@@ -53,7 +55,7 @@ func getPw() (pw string) {
 
 	pw, err = term.ReadPassword(prompt)
 	if err != nil {
-		generic.Fatal(err)
+		log2.Fatal(err)
 	}
 
 	return pw

@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func readData(file string, dataCfg *generic.DataConfigs) (fields []string, values [][]string) {
+func readData(file string, dataCfg *generic.DataConfigs) (values [][]string) {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Fatalln(err, file)
@@ -17,7 +17,7 @@ func readData(file string, dataCfg *generic.DataConfigs) (fields []string, value
 	uniqIdx := -1
 	r := csv.NewReader(f)
 
-	fields, err = r.Read()
+	dataCfg.Fields, err = r.Read()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -31,7 +31,7 @@ func readData(file string, dataCfg *generic.DataConfigs) (fields []string, value
 		return
 	}
 
-	for i, field := range fields {
+	for i, field := range dataCfg.Fields {
 		if field == dataCfg.UniqKey {
 			uniqIdx = i
 			break

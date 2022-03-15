@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/log"
 	goRedis "github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	traceableContext "github.com/tryfix/traceable-context"
@@ -38,9 +39,9 @@ func (v redisVal) MarshalBinary() ([]byte, error) {
 	return []byte(fmt.Sprintf("%v", v)), nil
 }
 
-func (r *redis) Write(_ []string, values [][]string, dataCfg generic.DataConfigs) {
+func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 	if dataCfg.UniqIdx < 0 {
-		generic.Fatal(errors.New(`no unique id to store as key`))
+		log.Fatal(errors.New(`no unique id to store as key`))
 	}
 
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -59,7 +60,7 @@ func (r *redis) Write(_ []string, values [][]string, dataCfg generic.DataConfigs
 			defer wg.Done()
 			cmd := r.db.Set(ctx, val[dataCfg.UniqIdx], rv, 0) // check expiry
 			if cmd.Err() != nil {
-				generic.Error(cmd.Err())
+				log.Error(cmd.Err())
 				return
 			}
 			atomic.AddUint64(&success, 1)

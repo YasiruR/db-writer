@@ -3,6 +3,7 @@ package neo4j
 import (
 	"fmt"
 	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/log"
 	goNeo4j "github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"sync"
 	"sync/atomic"
@@ -23,17 +24,17 @@ func Client() generic.Database {
 func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
 	db, err := goNeo4j.NewDriver(`bolt://`+cfg.Addr, goNeo4j.BasicAuth(cfg.Username, cfg.Passwd, ``))
 	if err != nil {
-		generic.Fatal(err)
+		log.Fatal(err)
 	}
 
 	n.db = db
 	return n
 }
 
-func (n *neo4j) Write(fields []string, values [][]string, dataCfg generic.DataConfigs) {
+func (n *neo4j) Write(values [][]string, dataCfg generic.DataConfigs) {
 	wg := &sync.WaitGroup{}
 	var success uint64
-	n.setTx(fields)
+	n.setTx(dataCfg.Fields)
 
 	for i, val := range values {
 		if dataCfg.Limit >= 0 && dataCfg.Limit == i {
@@ -45,7 +46,7 @@ func (n *neo4j) Write(fields []string, values [][]string, dataCfg generic.DataCo
 			defer wg.Done()
 			session := n.db.NewSession(goNeo4j.SessionConfig{})
 			defer session.Close()
-			go n.sendParams(fields, val)
+			go n.sendParams(dataCfg.Fields, val)
 
 			_, err := session.WriteTransaction(n.insertFunc)
 			if err == nil {

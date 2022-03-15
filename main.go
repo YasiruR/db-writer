@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/YasiruR/db-writer/elasticsearch"
 	"github.com/YasiruR/db-writer/generic"
 	"github.com/YasiruR/db-writer/neo4j"
 	"github.com/YasiruR/db-writer/redis"
@@ -8,12 +9,14 @@ import (
 
 func main() {
 	dbCfg, dataCfg, file := parseArg()
-	fields, values := readData(file, &dataCfg)
+	values := readData(file, &dataCfg)
 
 	switch dbCfg.Typ {
 	case generic.Redis:
-		redis.Client().Init(dbCfg).Write(fields, values, dataCfg)
+		redis.Client().Init(dbCfg).Write(values, dataCfg)
 	case generic.Neo4j:
-		neo4j.Client().Init(dbCfg).Write(fields, values, dataCfg)
+		neo4j.Client().Init(dbCfg).Write(values, dataCfg)
+	case generic.ElasticSearch:
+		elasticsearch.Client().Init(dbCfg).Write(values, dataCfg)
 	}
 }

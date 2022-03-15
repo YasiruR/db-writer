@@ -3,6 +3,7 @@ module github.com/YasiruR/db-writer
 go 1.16
 
 require (
+	github.com/elastic/go-elasticsearch/v8 v8.0.0
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/google/uuid v1.1.1
 	github.com/neo4j/neo4j-go-driver/v4 v4.4.1
