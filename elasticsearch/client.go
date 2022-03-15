@@ -1,6 +1,7 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/YasiruR/db-writer/generic"
@@ -59,6 +60,31 @@ func (e *elasticsearch) readCert() []byte {
 	return cert
 }
 
+func (e *elasticsearch) elasticData(fields, val []string) string {
+	var b bytes.Buffer
+	b.WriteString(`{`)
+	for i, f := range fields {
+		if f == `question` {
+			continue
+		}
+
+		b.WriteString(`"` + f + `" : "`)
+		b.WriteString(val[i] + `"`)
+
+		if i != len(fields)-1 {
+			b.WriteString(`,`)
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString("}")
+
+	fmt.Println()
+	fmt.Println(`VAL: `, b.String())
+	fmt.Println()
+
+	return b.String()
+}
+
 func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 	var success uint64
 	wg := &sync.WaitGroup{}
@@ -72,15 +98,12 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 		wg.Add(1)
 		go func(i int, val []string) {
 			defer wg.Done()
-			esVal := generic.Data{Body: val}
-
-			fmt.Println(`VAL: `, esVal.String())
-			fmt.Println()
+			//esVal := generic.Data{Body: val}
 
 			req := goEsApi.IndexRequest{
 				Index:      index,
 				DocumentID: strconv.Itoa(i + 1),
-				Body:       strings.NewReader(esVal.String()),
+				Body:       strings.NewReader(e.elasticData(dataCfg.Fields, val)),
 				Refresh:    "true",
 			}
 
