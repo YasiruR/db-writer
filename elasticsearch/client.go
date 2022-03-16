@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
@@ -53,7 +52,6 @@ func (e *elasticsearch) readCert(file string) []byte {
 
 func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 	var success uint64
-	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
 
 	for i, val := range values {
@@ -61,41 +59,36 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 			break
 		}
 
-		wg.Add(1)
-		go func(i int, val []string) {
-			defer wg.Done()
-			jsonVal := data{Body: val}.JSON(dataCfg)
+		fmt.Printf("\rSending data synchronously to elasticsearch: %d/%d", i+1, len(values))
 
-			var docID string
-			if dataCfg.Unique.Index < 0 {
-				docID = strconv.Itoa(i + 1)
-			} else {
-				docID = val[dataCfg.Unique.Index]
-			}
+		jsonVal := data{Body: val}.JSON(dataCfg)
+		var docID string
+		if dataCfg.Unique.Index < 0 {
+			docID = strconv.Itoa(i + 1)
+		} else {
+			docID = val[dataCfg.Unique.Index]
+		}
 
-			req := goEsApi.IndexRequest{
-				Index:      index,
-				DocumentID: docID,
-				Body:       strings.NewReader(jsonVal),
-				Refresh:    "true",
-			}
+		req := goEsApi.IndexRequest{
+			Index:      index,
+			DocumentID: docID,
+			Body:       strings.NewReader(jsonVal),
+			Refresh:    "true",
+		}
 
-			res, err := req.Do(ctx, e.db)
-			if err != nil {
-				log.Error(err)
-				return
-			}
+		res, err := req.Do(ctx, e.db)
+		if err != nil {
+			log.Error(err)
+		}
 
-			if res.IsError() {
-				log.Error(errors.New(res.String()), val[7]) // todo remove index
-				fmt.Println()
-			} else {
-				atomic.AddUint64(&success, 1)
-			}
-			defer res.Body.Close()
-		}(i, val)
+		if res.IsError() {
+			log.Error(errors.New(res.String()), val[7]) // todo remove index
+			fmt.Println()
+		} else {
+			atomic.AddUint64(&success, 1)
+		}
+		res.Body.Close()
 	}
 
-	wg.Wait()
-	fmt.Println(`total writes (elasticsearch): `, int(success))
+	fmt.Println("\ntotal writes (elasticsearch): ", int(success))
 }

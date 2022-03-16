@@ -19,7 +19,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 	key := flag.String(`unique`, ``, `unique key identifier`)
 	limit := flag.Int(`limit`, -1, `number of data items [maximum if not defined]`)
 	caCert := flag.String(`ca`, ``, `CA certificate file path for elasticsearch`)
-	pwHide := flag.Bool(`pwhide`, false, `[OPTIONAL] to enter password in hidden format`)
+	pwHide := flag.Bool(`pwhide`, false, `[OPTIONAL] to enter password in hidden format (true/false)`)
 
 	flag.Parse()
 
@@ -37,7 +37,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 
 	if *db == generic.ElasticSearch {
 		if *key == `` {
-			fmt.Println(`Documents will be indexed iteratively since no unique was provided`)
+			fmt.Println(`Documents will be indexed iteratively since no unique key is provided`)
 		}
 
 		if *caCert == `` {

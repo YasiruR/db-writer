@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/YasiruR/db-writer/elasticsearch"
 	"github.com/YasiruR/db-writer/generic"
 	"github.com/YasiruR/db-writer/neo4j"
@@ -8,6 +9,7 @@ import (
 )
 
 func main() {
+	fmt.Println()
 	dbCfg, dataCfg, file := parseArg()
 	values := readData(file, &dataCfg)
 
