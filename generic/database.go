@@ -1,7 +1,5 @@
 package generic
 
-import "time"
-
 // database types
 const (
 	Redis         = `redis`
@@ -21,17 +19,4 @@ type DBConfigs struct {
 	Username string
 	Passwd   string
 	CACert   string
-}
-
-type DataConfigs struct {
-	Fields  []string
-	UniqKey string // todo combine
-	UniqIdx int
-	Limit   int
-}
-
-type Options struct {
-	UniqIdx int
-	Persist bool
-	Expiry  time.Duration
 }

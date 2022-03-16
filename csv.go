@@ -28,6 +28,7 @@ func readData(file string, dataCfg *generic.DataConfigs) (values [][]string) {
 	}
 
 	if dataCfg.UniqKey == `` {
+		dataCfg.UniqIdx = -1
 		return
 	}
 

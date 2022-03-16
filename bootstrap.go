@@ -33,6 +33,10 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		log.Fatalln(`invalid database type`)
 	}
 
+	if *db == generic.ElasticSearch && *key == `` {
+		fmt.Println(`Documents will be indexed iteratively since no unique was provided`)
+	}
+
 	var pw string
 	if *pwdEnabled {
 		pw = getPw()

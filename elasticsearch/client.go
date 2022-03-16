@@ -1,7 +1,6 @@
 package elasticsearch
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/YasiruR/db-writer/generic"
@@ -31,7 +30,7 @@ func (e *elasticsearch) Init(cfg generic.DBConfigs) generic.Database {
 	es, err := goEs.NewClient(goEs.Config{
 		Addresses: []string{cfg.Addr},
 		Username:  `elastic`,
-		Password:  `vfBTpdH5qGJpvy8d9TfK`,
+		Password:  `*on0YcAz49+NpmGjgilV`,
 		CACert:    e.readCert(),
 	})
 
@@ -60,31 +59,6 @@ func (e *elasticsearch) readCert() []byte {
 	return cert
 }
 
-func (e *elasticsearch) elasticData(fields, val []string) string {
-	var b bytes.Buffer
-	b.WriteString(`{`)
-	for i, f := range fields {
-		if f == `question` {
-			continue
-		}
-
-		b.WriteString(`"` + f + `" : "`)
-		b.WriteString(val[i] + `"`)
-
-		if i != len(fields)-1 {
-			b.WriteString(`,`)
-			b.WriteString("\n")
-		}
-	}
-	b.WriteString("}")
-
-	fmt.Println()
-	fmt.Println(`VAL: `, b.String())
-	fmt.Println()
-
-	return b.String()
-}
-
 func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 	var success uint64
 	wg := &sync.WaitGroup{}
@@ -98,12 +72,19 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 		wg.Add(1)
 		go func(i int, val []string) {
 			defer wg.Done()
-			//esVal := generic.Data{Body: val}
+			jsonVal := data{Body: val}.JSON(dataCfg)
+
+			var docID string
+			if dataCfg.UniqIdx < 0 {
+				docID = strconv.Itoa(i + 1)
+			} else {
+				docID = val[dataCfg.UniqIdx]
+			}
 
 			req := goEsApi.IndexRequest{
 				Index:      index,
-				DocumentID: strconv.Itoa(i + 1),
-				Body:       strings.NewReader(e.elasticData(dataCfg.Fields, val)),
+				DocumentID: docID,
+				Body:       strings.NewReader(jsonVal),
 				Refresh:    "true",
 			}
 
@@ -114,7 +95,8 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 			}
 
 			if res.IsError() {
-				log.Error(errors.New(res.String()))
+				log.Error(errors.New(res.String()), val[7]) // todo remove index
+				fmt.Println()
 			} else {
 				atomic.AddUint64(&success, 1)
 			}

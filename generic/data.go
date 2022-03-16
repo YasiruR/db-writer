@@ -1,28 +1,14 @@
 package generic
 
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/YasiruR/db-writer/log"
-)
-
-type Data struct {
-	Body []string `json:"body"`
+type Data interface {
+	MarshalBinary() ([]byte, error)
+	JSON(dataCfg DataConfigs) (body string)
 }
 
-func (d Data) MarshalBinary() ([]byte, error) {
-	return []byte(fmt.Sprintf("%v", d)), nil
-}
-
-func (d Data) String() string {
-	//return fmt.Sprintf("{%v}", d.Body)
-
-	//return fmt.Sprintf(`{"data": "%s"}`, d.Body[0])
-
-	data, err := json.Marshal(d)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return string(data)
+type DataConfigs struct {
+	TableName string
+	Fields    []string
+	UniqKey   string // todo combine
+	UniqIdx   int
+	Limit     int
 }
