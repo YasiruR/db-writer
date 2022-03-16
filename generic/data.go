@@ -8,7 +8,9 @@ type Data interface {
 type DataConfigs struct {
 	TableName string
 	Fields    []string
-	UniqKey   string // todo combine
-	UniqIdx   int
-	Limit     int
+	Unique    struct {
+		Key   string
+		Index int
+	}
+	Limit int
 }

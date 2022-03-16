@@ -13,11 +13,13 @@ import (
 func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file string) {
 	db := flag.String(`db`, ``, `database type [OPTIONS: redis, neo4j, couchbase]`)
 	hostAddr := flag.String(`host`, ``, `database host address`)
-	pwdEnabled := flag.Bool(`pw`, false, `true if password is enabled`)
+	uname := flag.String(`uname`, ``, `database username if login is required`)
+	pw := flag.String(`pw`, ``, `database password (use pwhide for sensitive cases)`)
 	data := flag.String(`csv`, ``, `csv file path`)
 	key := flag.String(`unique`, ``, `unique key identifier`)
 	limit := flag.Int(`limit`, -1, `number of data items [maximum if not defined]`)
-	caCert := flag.String(`ca`, ``, `CA certificate for elasticsearch`)
+	caCert := flag.String(`ca`, ``, `CA certificate file path for elasticsearch`)
+	pwHide := flag.Bool(`pwhide`, false, `[OPTIONAL] to enter password in hidden format`)
 
 	flag.Parse()
 
@@ -33,16 +35,29 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		log.Fatalln(`invalid database type`)
 	}
 
-	if *db == generic.ElasticSearch && *key == `` {
-		fmt.Println(`Documents will be indexed iteratively since no unique was provided`)
+	if *db == generic.ElasticSearch {
+		if *key == `` {
+			fmt.Println(`Documents will be indexed iteratively since no unique was provided`)
+		}
+
+		if *caCert == `` {
+			fmt.Println(`Provide CA certificate for the access (compulsory from v8 upwards)`)
+		}
 	}
 
-	var pw string
-	if *pwdEnabled {
-		pw = getPw()
+	if *pwHide {
+		if *pw != `` {
+			log.Fatalln(`password has already been provided`)
+		}
+		*pw = getPw()
 	}
 
-	return generic.DBConfigs{Typ: *db, Addr: *hostAddr, Passwd: pw, CACert: *caCert}, generic.DataConfigs{UniqKey: *key, Limit: *limit}, *data
+	dataCfg = generic.DataConfigs{Unique: struct {
+		Key   string
+		Index int
+	}{Key: *key, Index: -1}, Limit: *limit}
+
+	return generic.DBConfigs{Typ: *db, Addr: *hostAddr, Username: *uname, Passwd: *pw, CACert: *caCert}, dataCfg, *data
 }
 
 func getPw() (pw string) {

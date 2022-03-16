@@ -27,18 +27,18 @@ func readData(file string, dataCfg *generic.DataConfigs) (values [][]string) {
 		log.Fatalln(err)
 	}
 
-	if dataCfg.UniqKey == `` {
-		dataCfg.UniqIdx = -1
+	if dataCfg.Unique.Key == `` {
+		dataCfg.Unique.Index = -1
 		return
 	}
 
 	for i, field := range dataCfg.Fields {
-		if field == dataCfg.UniqKey {
+		if field == dataCfg.Unique.Key {
 			uniqIdx = i
 			break
 		}
 	}
 
-	dataCfg.UniqIdx = uniqIdx
+	dataCfg.Unique.Index = uniqIdx
 	return
 }

@@ -29,29 +29,21 @@ func Client() generic.Database {
 func (e *elasticsearch) Init(cfg generic.DBConfigs) generic.Database {
 	es, err := goEs.NewClient(goEs.Config{
 		Addresses: []string{cfg.Addr},
-		Username:  `elastic`,
-		Password:  `*on0YcAz49+NpmGjgilV`,
-		CACert:    e.readCert(),
+		Username:  cfg.Username,
+		Password:  cfg.Passwd,
+		CACert:    e.readCert(cfg.CACert),
 	})
 
-	//es, err := goEs.NewDefaultClient()
 	if err != nil {
-		log.Fatal(err, cfg.CACert)
+		log.Fatal(err)
 	}
-
-	//res, err := es.Info()
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//defer res.Body.Close()
-	//fmt.Println(`connected to elasticsearch: `, res)
 
 	e.db = es
 	return e
 }
 
-func (e *elasticsearch) readCert() []byte {
-	cert, err := ioutil.ReadFile(`/home/yasi/Documents/http_ca.crt`)
+func (e *elasticsearch) readCert(file string) []byte {
+	cert, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -75,10 +67,10 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 			jsonVal := data{Body: val}.JSON(dataCfg)
 
 			var docID string
-			if dataCfg.UniqIdx < 0 {
+			if dataCfg.Unique.Index < 0 {
 				docID = strconv.Itoa(i + 1)
 			} else {
-				docID = val[dataCfg.UniqIdx]
+				docID = val[dataCfg.Unique.Index]
 			}
 
 			req := goEsApi.IndexRequest{

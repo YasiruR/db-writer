@@ -31,16 +31,8 @@ func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
 	return r
 }
 
-type redisVal struct {
-	body []string
-}
-
-func (v redisVal) MarshalBinary() ([]byte, error) {
-	return []byte(fmt.Sprintf("%v", v)), nil
-}
-
 func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
-	if dataCfg.UniqIdx < 0 {
+	if dataCfg.Unique.Index < 0 {
 		log.Fatal(errors.New(`no unique id to store as key`))
 	}
 
@@ -53,12 +45,12 @@ func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 			break
 		}
 
-		rv := redisVal{body: val}
+		rv := data{body: val}
 		wg.Add(1)
 
 		go func(val []string, wg *sync.WaitGroup) {
 			defer wg.Done()
-			cmd := r.db.Set(ctx, val[dataCfg.UniqIdx], rv, 0) // check expiry
+			cmd := r.db.Set(ctx, val[dataCfg.Unique.Index], rv, 0) // check expiry
 			if cmd.Err() != nil {
 				log.Error(cmd.Err())
 				return
