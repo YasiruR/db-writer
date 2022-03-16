@@ -19,6 +19,10 @@ db-writer is a golang implementation to deploy datasets in csv format to databas
 - pw: password of the database user [OPTIONAL]
 - pwhide: true if the password is sensitive [OPTIONAL]
 - ca: path of the CA certificate file [only for elasticsearch]
+- unique: unique key of the database
+  - redis - required
+  - neo4j - not required
+  - elasticsearch - required, but if omitted documents will be indexed by (1,n]
 - limit: number of data items to be stored [If omitted, all data in csv file will be stored]
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -ca=./http_ca.crt -limit=10`
