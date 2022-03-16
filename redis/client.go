@@ -28,6 +28,8 @@ func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
 	})
 
 	r.db = db
+	fmt.Println(`Database connection established with redis`)
+
 	return r
 }
 
@@ -45,6 +47,8 @@ func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 			break
 		}
 
+		fmt.Printf("\rSending data: %d/%d", i+1, len(values))
+
 		rv := data{body: val}
 		wg.Add(1)
 
@@ -59,6 +63,7 @@ func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 		}(val, wg)
 	}
 
+	fmt.Println("\nWaiting for the database to complete operations...")
 	wg.Wait()
-	fmt.Println(`total writes (redis): `, int(success))
+	fmt.Println(`Total successful writes: `, int(success))
 }

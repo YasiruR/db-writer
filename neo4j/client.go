@@ -28,6 +28,8 @@ func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
 	}
 
 	n.db = db
+	fmt.Println(`Database connection established with neo4j`)
+
 	return n
 }
 
@@ -40,6 +42,8 @@ func (n *neo4j) Write(values [][]string, dataCfg generic.DataConfigs) {
 		if dataCfg.Limit >= 0 && dataCfg.Limit == i {
 			break
 		}
+
+		fmt.Printf("\rSending data: %d/%d", i+1, len(values))
 
 		wg.Add(1)
 		go func(val []string) {
@@ -55,8 +59,9 @@ func (n *neo4j) Write(values [][]string, dataCfg generic.DataConfigs) {
 		}(val)
 	}
 
+	fmt.Println("\nWaiting for the database to complete operations...")
 	wg.Wait()
-	fmt.Println(`total writes (redis): `, int(success))
+	fmt.Println(`Total successful writes: `, int(success))
 }
 
 func (n *neo4j) setTx(fields []string) {

@@ -38,6 +38,8 @@ func (e *elasticsearch) Init(cfg generic.DBConfigs) generic.Database {
 	}
 
 	e.db = es
+	fmt.Println(`Database connection established with elasticsearch`)
+
 	return e
 }
 
@@ -59,7 +61,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 			break
 		}
 
-		fmt.Printf("\rSending data synchronously to elasticsearch: %d/%d", i+1, len(values))
+		fmt.Printf("\rSending data synchronously: %d/%d", i+1, len(values))
 
 		jsonVal := data{Body: val}.JSON(dataCfg)
 		var docID string
@@ -82,7 +84,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 		}
 
 		if res.IsError() {
-			log.Error(errors.New(res.String()), val[7]) // todo remove index
+			log.Error(errors.New(res.String()))
 			fmt.Println()
 		} else {
 			atomic.AddUint64(&success, 1)
@@ -90,5 +92,6 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 		res.Body.Close()
 	}
 
-	fmt.Println("\ntotal writes (elasticsearch): ", int(success))
+	fmt.Println("\nWaiting for the database to complete operations...")
+	fmt.Println("Total successful writes: ", int(success))
 }
