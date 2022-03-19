@@ -15,7 +15,7 @@ type Database interface {
 
 type DBConfigs struct {
 	Typ      string
-	Addr     string //todo list of hosts
+	Hosts    []string
 	Username string
 	Passwd   string
 	CACert   string

@@ -27,7 +27,7 @@ func Client() generic.Database {
 
 func (e *elasticsearch) Init(cfg generic.DBConfigs) generic.Database {
 	es, err := goEs.NewClient(goEs.Config{
-		Addresses: []string{cfg.Addr},
+		Addresses: cfg.Hosts,
 		Username:  cfg.Username,
 		Password:  cfg.Passwd,
 		CACert:    e.readCert(cfg.CACert),

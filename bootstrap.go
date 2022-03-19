@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
+	"strings"
 )
 
 func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file string) {
@@ -45,6 +46,8 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		}
 	}
 
+	hosts := hosts(*hostAddr)
+
 	if *pwHide {
 		if *pw != `` {
 			log.Fatalln(`password has already been provided`)
@@ -57,7 +60,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		Index int
 	}{Key: *key, Index: -1}, Limit: *limit}
 
-	return generic.DBConfigs{Typ: *db, Addr: *hostAddr, Username: *uname, Passwd: *pw, CACert: *caCert}, dataCfg, *data
+	return generic.DBConfigs{Typ: *db, Hosts: hosts, Username: *uname, Passwd: *pw, CACert: *caCert}, dataCfg, *data
 }
 
 func getPw() (pw string) {
@@ -78,4 +81,13 @@ func getPw() (pw string) {
 	}
 
 	return pw
+}
+
+func hosts(arg string) []string {
+	list := strings.Split(arg, `,`)
+	if len(list) == 0 {
+		log.Fatalln(`host list is empty`)
+	}
+
+	return list
 }

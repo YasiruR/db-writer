@@ -22,7 +22,8 @@ func Client() generic.Database {
 }
 
 func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
-	db, err := goNeo4j.NewDriver(`bolt://`+cfg.Addr, goNeo4j.BasicAuth(cfg.Username, cfg.Passwd, ``))
+	// todo check cluster
+	db, err := goNeo4j.NewDriver(`bolt://`+cfg.Hosts[0], goNeo4j.BasicAuth(cfg.Username, cfg.Passwd, ``))
 	if err != nil {
 		log.Fatal(err)
 	}
