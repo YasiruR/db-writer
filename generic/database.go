@@ -5,6 +5,7 @@ const (
 	Redis         = `redis`
 	Neo4j         = `neo4j`
 	ElasticSearch = `elasticsearch`
+	ArangoDB      = `arangodb`
 	Couchbase     = `couchbase`
 )
 
@@ -19,4 +20,5 @@ type DBConfigs struct {
 	Username string
 	Passwd   string
 	CACert   string
+	Name     string
 }

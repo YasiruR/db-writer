@@ -6,7 +6,7 @@ type Data interface {
 }
 
 type DataConfigs struct {
-	TableName string
+	TableName string // todo
 	Fields    []string
 	Unique    struct {
 		Key   string

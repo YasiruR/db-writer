@@ -21,6 +21,8 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 	limit := flag.Int(`limit`, -1, `number of data items [maximum if not defined]`)
 	caCert := flag.String(`ca`, ``, `CA certificate file path for elasticsearch`)
 	pwHide := flag.Bool(`pwhide`, false, `[OPTIONAL] to enter password in hidden format (true/false)`)
+	table := flag.String(`table`, ``, `collection name for arangodb ['my_collection' will be used if omitted]`)
+	dbName := flag.String(`dbname`, ``, `database name for arangodb [_system will be used if omitted]`)
 
 	flag.Parse()
 
@@ -32,7 +34,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		log.Fatalln(`unique key field should be provided for redis`)
 	}
 
-	if *db != generic.Redis && *db != generic.Neo4j && *db != generic.ElasticSearch {
+	if *db != generic.Redis && *db != generic.Neo4j && *db != generic.ElasticSearch && *db != generic.ArangoDB {
 		log.Fatalln(`invalid database type`)
 	}
 
@@ -46,8 +48,17 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		}
 	}
 
-	hosts := hosts(*hostAddr)
+	if *db == generic.ArangoDB {
+		if *table == `` {
+			*table = `my_collection`
+		}
 
+		if *dbName == `` {
+			*dbName = `_system`
+		}
+	}
+
+	h := hosts(*hostAddr)
 	if *pwHide {
 		if *pw != `` {
 			log.Fatalln(`password has already been provided`)
@@ -55,12 +66,12 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		*pw = getPw()
 	}
 
-	dataCfg = generic.DataConfigs{Unique: struct {
+	dataCfg = generic.DataConfigs{TableName: *table, Unique: struct {
 		Key   string
 		Index int
 	}{Key: *key, Index: -1}, Limit: *limit}
 
-	return generic.DBConfigs{Typ: *db, Hosts: hosts, Username: *uname, Passwd: *pw, CACert: *caCert}, dataCfg, *data
+	return generic.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}, dataCfg, *data
 }
 
 func getPw() (pw string) {
