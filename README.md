@@ -7,6 +7,7 @@ db-writer is a golang implementation to deploy datasets in csv format to databas
 - [Redis](https://redis.io/)
 - [Neo4j](https://neo4j.com/)
 - [Elasticsearch](https://www.elastic.co/) [Concurrency is removed in db-writer to cope with resource utilization]
+- [ArangoDB](https://www.arangodb.com/)
 
 ### Executable command
 
@@ -23,7 +24,11 @@ db-writer is a golang implementation to deploy datasets in csv format to databas
   - redis - required
   - neo4j - not required
   - elasticsearch - required, but if omitted documents will be indexed by (1,n]
-- limit: number of data items to be stored [If omitted, all data in csv file will be stored]
+- limit: number of data items to be stored [if omitted, all data in csv file will be stored]
+- table: name of the collection/table
+  - only required for arangodb [if omitted, `my_collection` will be used]
+- dname: name of the database
+  - only required for arangodb [if omitted, `_system` will be used]
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -ca=./http_ca.crt -limit=10`
 
