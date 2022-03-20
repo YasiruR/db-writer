@@ -49,3 +49,43 @@ eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/Y
   - `curl -H 'Content-Type: application/json' --cacert ./http_ca.crt -X GET https://localhost:9200/<index>/_search?pretty -u <username>:<password>`
 - Get document by ID
   - `curl -H 'Content-Type: application/json' --cacert ./http_ca.crt -X GET https://localhost:9200/<index>/_doc/<id> -u <username>:<password>`
+
+## Redis Guide
+
+### Deploy using source code
+
+1. Download the source code `wget https://download.redis.io/releases/redis-6.2.6.tar.gz`
+2. Extract the file `tar xzf redis-6.2.6.tar.gz`
+3. Compile the code `cd redis-6.2.6.tar.gz && make`
+4. Create the redis configuration file, `redis.conf` as follows 
+   ```
+    port 7000 // only required for local deployments or port conflicts
+    cluster-enabled yes
+    cluster-config-file nodes.conf
+    cluster-node-timeout 5000
+    appendonly yes
+    protected-mode no
+   ```
+5. Start each node `./redis-server redis.conf`
+6. Create the cluster `redis-cli --cluster create 127.0.0.1:7000 127.0.0.2:7000
+   --cluster-replicas 1`
+    - NB: Use IP addresses since redis instance does not support hostnames
+
+## ArangoDB Guide
+
+### Deploy using package manager (Debian)
+
+1. Add repository key 
+   1. `curl -OL https://download.arangodb.com/arangodb39/DEBIAN/Release.key`
+   2. `sudo apt-key add - < Release.key`
+2. Install using package manager
+   1. `echo 'deb https://download.arangodb.com/arangodb39/DEBIAN/ /' | sudo tee /etc/apt/sources.list.d/arangodb.list`
+   2. `sudo apt-get install apt-transport-https`
+   3. `sudo apt-get update`
+   4. `sudo apt-get install arangodb3=3.9.0-1`
+3. Start the cluster
+   1. Locally: `arangodb --starter.local`
+      1. Predefined cluster with 3 coordinators, 3 database servers and 3 agents
+   2. Remote: `arangodb` and `arangodb --starter.join <coordinator ip>`
+4. Check with Web UI `http://localhost:8529/`
+
