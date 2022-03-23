@@ -107,3 +107,6 @@ func (a *arangodb) Write(values [][]string, dataCfg generic.DataConfigs) {
 	wg.Wait()
 	fmt.Println(`Total successful writes: `, int(success))
 }
+
+func (a *arangodb) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs)  {}
+func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {}

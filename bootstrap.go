@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file string) {
+func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg generic.TestConfigs, file string) {
 	db := flag.String(`db`, ``, `database type [OPTIONS: redis, neo4j, couchbase]`)
 	hostAddr := flag.String(`host`, ``, `database host address`)
 	uname := flag.String(`uname`, ``, `database username if login is required`)
@@ -23,8 +23,13 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 	pwHide := flag.Bool(`pwhide`, false, `[OPTIONAL] to enter password in hidden format (true/false)`)
 	table := flag.String(`table`, ``, `collection name for arangodb ['my_collection' will be used if omitted]`)
 	dbName := flag.String(`dbname`, ``, `database name for arangodb [_system will be used if omitted]`)
+	testType := flag.String(`benchmark`, ``, `functionality to be tested with a load (read/write)`)
+	loadSize := flag.Int(`load`, 0, `batch size of the benchmark test`)
 
 	flag.Parse()
+	fmt.Println()
+
+	// todo add validate func
 
 	if *db == `` || *hostAddr == `` || *data == `` {
 		log.Fatalln(`null command arguments found`)
@@ -58,6 +63,10 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		}
 	}
 
+	if *testType != `` && *loadSize == 0 {
+		log.Fatalln(`load size should be specified for benchmark test`)
+	}
+
 	h := hosts(*hostAddr)
 	if *pwHide {
 		if *pw != `` {
@@ -71,7 +80,10 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, file stri
 		Index int
 	}{Key: *key, Index: -1}, Limit: *limit}
 
-	return generic.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}, dataCfg, *data
+	dbCfg = generic.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}
+	testCfg = generic.TestConfigs{Typ: *testType, Load: *loadSize}
+
+	return dbCfg, dataCfg, testCfg, *data
 }
 
 func getPw() (pw string) {

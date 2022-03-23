@@ -11,6 +11,7 @@ import (
 	traceableContext "github.com/tryfix/traceable-context"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type redis struct {
@@ -99,4 +100,54 @@ func (r *redis) read(values [][]string, dataCfg generic.DataConfigs) {
 
 		fmt.Printf("key: %s val: %s\n", val[dataCfg.Unique.Index], cmd.Val())
 	}
+}
+
+func (r *redis) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs) {
+	var aggrLatency, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+
+	// setting up ids
+	var ids []string
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+	}
+
+	testStartedTime := time.Now()
+	for i, id := range ids {
+		wg.Add(1)
+		go func(i int, id string) {
+			defer wg.Done()
+			startedTime := time.Now()
+			cmd := r.client.Get(ctx, id)
+			elapsedTime := time.Since(startedTime).Microseconds()
+
+			if cmd.Err() != nil {
+				log.Error(cmd.Err())
+				return
+			}
+
+			rv := data{body: values[i]}
+
+			if cmd.Val() != rv.Str() {
+				log.Error(errors.New(`read values are not equal`), cmd.Val(), rv.Str())
+				return
+			}
+
+			atomic.AddUint64(&aggrLatency, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(i, id)
+	}
+
+	wg.Wait()
+	testElapsedTime := time.Since(testStartedTime).Microseconds()
+	fmt.Println("========= Load Test Results (Read) ==========")
+	fmt.Println("success reads: ", success)
+	fmt.Println("total time taken (ms): ", testElapsedTime)
+	fmt.Println("throughput (req/s) : ", int64(success*1e6)/testElapsedTime) // todo check if success or total
+	fmt.Println("average latency (ms): ", float64(aggrLatency)/float64(success*1e3))
+}
+
+func (r *redis) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {
+
 }

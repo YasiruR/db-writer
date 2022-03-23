@@ -95,3 +95,6 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 	fmt.Println("\nWaiting for the database to complete operations...")
 	fmt.Println("Total successful writes: ", int(success))
 }
+
+func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs)  {}
+func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {}

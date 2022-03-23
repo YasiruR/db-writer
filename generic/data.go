@@ -3,6 +3,7 @@ package generic
 type Data interface {
 	MarshalBinary() ([]byte, error)
 	JSON(dataCfg DataConfigs) (body string)
+	Str() string // todo name and update in other dbs
 }
 
 type DataConfigs struct {

@@ -6,12 +6,13 @@ const (
 	Neo4j         = `neo4j`
 	ElasticSearch = `elasticsearch`
 	ArangoDB      = `arangodb`
-	Couchbase     = `couchbase`
 )
 
 type Database interface {
 	Init(cfg DBConfigs) Database
 	Write(values [][]string, cfg DataConfigs)
+	BenchmarkRead(values [][]string, dataCfg DataConfigs)
+	BenchmarkWrite(values [][]string, dataCfg DataConfigs)
 }
 
 type DBConfigs struct {
@@ -21,4 +22,9 @@ type DBConfigs struct {
 	Passwd   string
 	CACert   string
 	Name     string
+}
+
+type TestConfigs struct {
+	Typ  string
+	Load int
 }

@@ -96,3 +96,6 @@ func (n *neo4j) insertFunc(tx goNeo4j.Transaction) (interface{}, error) {
 
 	return nil, nil
 }
+
+func (n *neo4j) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs)  {}
+func (n *neo4j) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {}

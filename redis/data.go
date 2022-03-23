@@ -16,3 +16,7 @@ func (d data) MarshalBinary() ([]byte, error) {
 func (d data) JSON(_ generic.DataConfigs) (body string) {
 	return ""
 }
+
+func (d data) Str() string {
+	return fmt.Sprintf("%v", d)
+}
