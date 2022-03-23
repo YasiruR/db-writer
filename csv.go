@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/csv"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"log"
 	"os"
 )
 
-func readData(file string, dataCfg *generic.DataConfigs) (values [][]string) {
+func readData(file string, dataCfg *domain.DataConfigs) (values [][]string) {
 	f, err := os.Open(file)
 	if err != nil {
 		log.Fatalln(err, file)

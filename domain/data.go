@@ -1,4 +1,4 @@
-package generic
+package domain
 
 type Data interface {
 	MarshalBinary() ([]byte, error)

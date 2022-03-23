@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
+	"github.com/YasiruR/db-writer/tester"
 	goRedis "github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	traceableContext "github.com/tryfix/traceable-context"
@@ -18,11 +19,11 @@ type redis struct {
 	client goRedis.Cmdable
 }
 
-func Client() generic.Database {
+func Client() domain.Database {
 	return &redis{}
 }
 
-func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
+func (r *redis) Init(cfg domain.DBConfigs) domain.Database {
 	switch len(cfg.Hosts) {
 	case 1:
 		db := goRedis.NewClient(&goRedis.Options{
@@ -43,7 +44,7 @@ func (r *redis) Init(cfg generic.DBConfigs) generic.Database {
 	return r
 }
 
-func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
+func (r *redis) Write(values [][]string, dataCfg domain.DataConfigs) {
 	if dataCfg.Unique.Index < 0 {
 		log.Fatal(errors.New(`no unique id to store as key`))
 	}
@@ -66,7 +67,7 @@ func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 			defer wg.Done()
 			cmd := r.client.Set(ctx, val[dataCfg.Unique.Index], rv, 0) // check expiry
 			if cmd.Err() != nil {
-				log.Error(errors.New("ERROR: " + cmd.Err().Error()))
+				log.Error(errors.New(cmd.Err().Error()))
 				return
 			}
 
@@ -85,7 +86,7 @@ func (r *redis) Write(values [][]string, dataCfg generic.DataConfigs) {
 	fmt.Println(`Total successful writes: `, int(success))
 }
 
-func (r *redis) read(values [][]string, dataCfg generic.DataConfigs) {
+func (r *redis) read(values [][]string, dataCfg domain.DataConfigs) {
 	ctx := traceableContext.WithUUID(uuid.New())
 	for i, val := range values {
 		if dataCfg.Limit >= 0 && dataCfg.Limit == i {
@@ -102,8 +103,8 @@ func (r *redis) read(values [][]string, dataCfg generic.DataConfigs) {
 	}
 }
 
-func (r *redis) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs) {
-	var aggrLatency, success uint64
+func (r *redis) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
 
@@ -134,20 +135,49 @@ func (r *redis) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs) {
 				return
 			}
 
-			atomic.AddUint64(&aggrLatency, uint64(elapsedTime))
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
 			atomic.AddUint64(&success, 1)
 		}(i, id)
 	}
 
 	wg.Wait()
-	testElapsedTime := time.Since(testStartedTime).Microseconds()
-	fmt.Println("========= Load Test Results (Read) ==========")
-	fmt.Println("success reads: ", success)
-	fmt.Println("total time taken (ms): ", testElapsedTime)
-	fmt.Println("throughput (req/s) : ", int64(success*1e6)/testElapsedTime) // todo check if success or total
-	fmt.Println("average latency (ms): ", float64(aggrLatency)/float64(success*1e3))
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	tester.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }
 
-func (r *redis) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {
+func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
 
+	// setting up ids
+	var ids []string
+	var rValues []data
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+		rValues = append(rValues, data{body: val})
+	}
+
+	testStartedTime := time.Now()
+	for i, val := range rValues {
+		wg.Add(1)
+		go func(i int, val data) {
+			defer wg.Done()
+			startedTime := time.Now()
+			cmd := r.client.Set(ctx, ids[i], val, 0)
+			elapsedTime := time.Since(startedTime).Microseconds()
+
+			if cmd.Err() != nil {
+				log.Error(cmd.Err())
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(i, val)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	tester.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }

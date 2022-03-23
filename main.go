@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/YasiruR/db-writer/arangodb"
+	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/elasticsearch"
-	"github.com/YasiruR/db-writer/generic"
 	"github.com/YasiruR/db-writer/neo4j"
 	"github.com/YasiruR/db-writer/redis"
 )
@@ -12,15 +12,15 @@ func main() {
 	dbCfg, dataCfg, testCfg, file := parseArg()
 	values := readData(file, &dataCfg)
 
-	var db generic.Database
+	var db domain.Database
 	switch dbCfg.Typ {
-	case generic.Redis:
+	case domain.Redis:
 		db = redis.Client()
-	case generic.Neo4j:
+	case domain.Neo4j:
 		neo4j.Client()
-	case generic.ElasticSearch:
+	case domain.ElasticSearch:
 		elasticsearch.Client()
-	case generic.ArangoDB:
+	case domain.ArangoDB:
 		arangodb.Client()
 	}
 
@@ -30,5 +30,10 @@ func main() {
 		return
 	}
 
-	db.BenchmarkRead(values[:testCfg.Load], dataCfg) // todo param
+	switch testCfg.Typ {
+	case domain.BenchmarkRead:
+		db.BenchmarkRead(values[:testCfg.Load], dataCfg, testCfg)
+	case domain.BenchmarkWrite:
+		db.BenchmarkWrite(values[:testCfg.Load], dataCfg, testCfg)
+	}
 }

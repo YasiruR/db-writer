@@ -3,7 +3,7 @@ package elasticsearch
 import (
 	"errors"
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
 	goEs "github.com/elastic/go-elasticsearch/v8"
 	goEsApi "github.com/elastic/go-elasticsearch/v8/esapi"
@@ -21,11 +21,11 @@ type elasticsearch struct {
 	db *goEs.Client
 }
 
-func Client() generic.Database {
+func Client() domain.Database {
 	return &elasticsearch{}
 }
 
-func (e *elasticsearch) Init(cfg generic.DBConfigs) generic.Database {
+func (e *elasticsearch) Init(cfg domain.DBConfigs) domain.Database {
 	es, err := goEs.NewClient(goEs.Config{
 		Addresses: cfg.Hosts,
 		Username:  cfg.Username,
@@ -52,7 +52,7 @@ func (e *elasticsearch) readCert(file string) []byte {
 	return cert
 }
 
-func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
+func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 	var success uint64
 	ctx := traceableContext.WithUUID(uuid.New())
 
@@ -96,5 +96,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg generic.DataConfigs) {
 	fmt.Println("Total successful writes: ", int(success))
 }
 
-func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs)  {}
-func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {}
+func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+}
+func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+}

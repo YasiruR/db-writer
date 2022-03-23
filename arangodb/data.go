@@ -3,7 +3,7 @@ package arangodb
 import (
 	"bytes"
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"strings"
 )
 
@@ -15,7 +15,7 @@ func (d data) MarshalBinary() ([]byte, error) {
 	return []byte(fmt.Sprintf("%v", d)), nil
 }
 
-func (d data) JSON(dataCfg generic.DataConfigs) (body string) {
+func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 	var b bytes.Buffer
 	b.WriteString(`{`)
 	for i, f := range dataCfg.Fields {
@@ -53,7 +53,7 @@ func (d data) JSON(dataCfg generic.DataConfigs) (body string) {
 	return b.String()
 }
 
-func (d data) Map(dataCfg generic.DataConfigs) map[string]interface{} {
+func (d data) Map(dataCfg domain.DataConfigs) map[string]interface{} {
 	m := make(map[string]interface{})
 
 	for i, f := range dataCfg.Fields {

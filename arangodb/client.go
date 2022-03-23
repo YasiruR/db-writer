@@ -3,7 +3,7 @@ package arangodb
 import (
 	"context"
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
 	driver "github.com/arangodb/go-driver"
 	dbHttp "github.com/arangodb/go-driver/http"
@@ -17,11 +17,11 @@ type arangodb struct {
 	db driver.Database
 }
 
-func Client() generic.Database {
+func Client() domain.Database {
 	return &arangodb{}
 }
 
-func (a *arangodb) Init(cfg generic.DBConfigs) generic.Database {
+func (a *arangodb) Init(cfg domain.DBConfigs) domain.Database {
 	ctx := traceableContext.WithUUID(uuid.New())
 	conn, err := dbHttp.NewConnection(dbHttp.ConnectionConfig{Endpoints: cfg.Hosts})
 	if err != nil {
@@ -57,7 +57,7 @@ func (a *arangodb) Init(cfg generic.DBConfigs) generic.Database {
 	return a
 }
 
-func (a *arangodb) Write(values [][]string, dataCfg generic.DataConfigs) {
+func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 	ctx := traceableContext.WithUUID(uuid.New())
 	wg := &sync.WaitGroup{}
 	var success uint64
@@ -108,5 +108,7 @@ func (a *arangodb) Write(values [][]string, dataCfg generic.DataConfigs) {
 	fmt.Println(`Total successful writes: `, int(success))
 }
 
-func (a *arangodb) BenchmarkRead(values [][]string, dataCfg generic.DataConfigs)  {}
-func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg generic.DataConfigs) {}
+func (a *arangodb) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+}
+func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+}

@@ -1,4 +1,4 @@
-package generic
+package domain
 
 // database types
 const (
@@ -8,11 +8,17 @@ const (
 	ArangoDB      = `arangodb`
 )
 
+// benchmark types
+const (
+	BenchmarkRead  = `read`
+	BenchmarkWrite = `write`
+)
+
 type Database interface {
 	Init(cfg DBConfigs) Database
 	Write(values [][]string, cfg DataConfigs)
-	BenchmarkRead(values [][]string, dataCfg DataConfigs)
-	BenchmarkWrite(values [][]string, dataCfg DataConfigs)
+	BenchmarkRead(values [][]string, dataCfg DataConfigs, testCfg TestConfigs)
+	BenchmarkWrite(values [][]string, dataCfg DataConfigs, testCfg TestConfigs)
 }
 
 type DBConfigs struct {
@@ -25,6 +31,7 @@ type DBConfigs struct {
 }
 
 type TestConfigs struct {
-	Typ  string
-	Load int
+	Database string
+	Typ      string
+	Load     int
 }

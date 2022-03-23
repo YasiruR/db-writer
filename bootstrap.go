@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	log2 "github.com/YasiruR/db-writer/log"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg generic.TestConfigs, file string) {
+func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg domain.TestConfigs, file string) {
 	db := flag.String(`db`, ``, `database type [OPTIONS: redis, neo4j, couchbase]`)
 	hostAddr := flag.String(`host`, ``, `database host address`)
 	uname := flag.String(`uname`, ``, `database username if login is required`)
@@ -35,15 +35,15 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg g
 		log.Fatalln(`null command arguments found`)
 	}
 
-	if *db == generic.Redis && *key == `` {
+	if *db == domain.Redis && *key == `` {
 		log.Fatalln(`unique key field should be provided for redis`)
 	}
 
-	if *db != generic.Redis && *db != generic.Neo4j && *db != generic.ElasticSearch && *db != generic.ArangoDB {
+	if *db != domain.Redis && *db != domain.Neo4j && *db != domain.ElasticSearch && *db != domain.ArangoDB {
 		log.Fatalln(`invalid database type`)
 	}
 
-	if *db == generic.ElasticSearch {
+	if *db == domain.ElasticSearch {
 		if *key == `` {
 			fmt.Println(`Documents will be indexed iteratively since no unique key is provided`)
 		}
@@ -53,7 +53,7 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg g
 		}
 	}
 
-	if *db == generic.ArangoDB {
+	if *db == domain.ArangoDB {
 		if *table == `` {
 			*table = `my_collection`
 		}
@@ -63,8 +63,14 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg g
 		}
 	}
 
-	if *testType != `` && *loadSize == 0 {
-		log.Fatalln(`load size should be specified for benchmark test`)
+	if *testType != `` {
+		if *loadSize == 0 {
+			log.Fatalln(`load size should be specified for benchmark test`)
+		}
+
+		if *testType != domain.BenchmarkRead && *testType != domain.BenchmarkWrite {
+			log.Fatalln(`test type should either be read or write`)
+		}
 	}
 
 	h := hosts(*hostAddr)
@@ -75,13 +81,13 @@ func parseArg() (dbCfg generic.DBConfigs, dataCfg generic.DataConfigs, testCfg g
 		*pw = getPw()
 	}
 
-	dataCfg = generic.DataConfigs{TableName: *table, Unique: struct {
+	dataCfg = domain.DataConfigs{TableName: *table, Unique: struct {
 		Key   string
 		Index int
 	}{Key: *key, Index: -1}, Limit: *limit}
 
-	dbCfg = generic.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}
-	testCfg = generic.TestConfigs{Typ: *testType, Load: *loadSize}
+	dbCfg = domain.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}
+	testCfg = domain.TestConfigs{Database: *db, Typ: *testType, Load: *loadSize}
 
 	return dbCfg, dataCfg, testCfg, *data
 }
