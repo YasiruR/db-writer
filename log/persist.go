@@ -1,10 +1,9 @@
-package tester
+package log
 
 import (
 	"encoding/csv"
 	"fmt"
 	"github.com/YasiruR/db-writer/domain"
-	"github.com/YasiruR/db-writer/log"
 	"io"
 	"os"
 	"strconv"
@@ -12,8 +11,9 @@ import (
 
 func Output(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, aggrLatency uint64, persist bool) {
 
-	fmt.Println("========= Load Test Results (Read) ==========")
-	fmt.Println("successful reads: ", successCount)
+	fmt.Println()
+	fmt.Println("========= Load Test Results (" + cfg.Typ + ") ==========")
+	fmt.Println("successful ops: ", successCount)
 	fmt.Println("total time taken (micro seconds): ", totalElapsedTime)
 	fmt.Println("throughput (req/s) : ", successCount*1e6/totalElapsedTime) // todo check if success or total
 	fmt.Println("average latency (micro seconds): ", float64(aggrLatency)/float64(successCount*1e3))
@@ -33,7 +33,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.Mkdir(dir, os.ModePerm)
 		if err != nil {
-			log.Fatal(err)
+			Fatal(err)
 		}
 	}
 
@@ -44,7 +44,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 	if fileExists(fileName) {
 		f, err := os.Open(fileName)
 		if err != nil {
-			log.Error(err)
+			Error(err)
 		}
 
 		r := csv.NewReader(f)
@@ -55,7 +55,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 			}
 
 			if err != nil {
-				log.Fatal(err)
+				Fatal(err)
 			}
 
 			data = append(data, record)
@@ -67,7 +67,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 
 	f, err := os.Create(fileName)
 	if err != nil {
-		log.Fatal(err)
+		Fatal(err)
 	}
 	w := csv.NewWriter(f)
 
@@ -78,7 +78,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 
 	err = w.WriteAll(data)
 	if err != nil {
-		log.Fatal(err)
+		Fatal(err)
 	}
 }
 

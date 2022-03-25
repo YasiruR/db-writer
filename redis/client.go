@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
-	"github.com/YasiruR/db-writer/tester"
 	goRedis "github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	traceableContext "github.com/tryfix/traceable-context"
@@ -142,7 +141,7 @@ func (r *redis) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, tes
 
 	wg.Wait()
 	totalDurMicSec := time.Since(testStartedTime).Microseconds()
-	tester.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }
 
 func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
@@ -179,5 +178,5 @@ func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, te
 
 	wg.Wait()
 	totalDurMicSec := time.Since(testStartedTime).Microseconds()
-	tester.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }

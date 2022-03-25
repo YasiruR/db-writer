@@ -8,7 +8,7 @@ import (
 )
 
 type data struct {
-	Body []string
+	body []string
 }
 
 func (d data) MarshalBinary() ([]byte, error) {
@@ -20,20 +20,20 @@ func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 	b.WriteString(`{`)
 	for i, f := range dataCfg.Fields {
 		// eliminating escaping and invalid characters of string body to parse as a json
-		if strings.Contains(d.Body[i], "\n") {
-			d.Body[i] = strings.ReplaceAll(d.Body[i], "\n", " ")
+		if strings.Contains(d.body[i], "\n") {
+			d.body[i] = strings.ReplaceAll(d.body[i], "\n", " ")
 		}
 
-		if strings.Contains(d.Body[i], "'") {
-			d.Body[i] = strings.ReplaceAll(d.Body[i], "'", "")
+		if strings.Contains(d.body[i], "'") {
+			d.body[i] = strings.ReplaceAll(d.body[i], "'", "")
 		}
 
-		if strings.Contains(d.Body[i], "\"") {
-			d.Body[i] = strings.ReplaceAll(d.Body[i], "\"", "'")
+		if strings.Contains(d.body[i], "\"") {
+			d.body[i] = strings.ReplaceAll(d.body[i], "\"", "'")
 		}
 
-		if strings.Contains(d.Body[i], "\\") {
-			d.Body[i] = strings.ReplaceAll(d.Body[i], "\\", "")
+		if strings.Contains(d.body[i], "\\") {
+			d.body[i] = strings.ReplaceAll(d.body[i], "\\", "")
 		}
 
 		if f == dataCfg.Unique.Key {
@@ -41,7 +41,7 @@ func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 		} else {
 			b.WriteString(`"` + f + `" : "`)
 		}
-		b.WriteString(d.Body[i] + `"`)
+		b.WriteString(d.body[i] + `"`)
 
 		if i != len(dataCfg.Fields)-1 {
 			b.WriteString(`,`)
@@ -53,11 +53,14 @@ func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 	return b.String()
 }
 
-func (d data) Map(dataCfg domain.DataConfigs) map[string]interface{} {
+func (d data) doc(dataCfg domain.DataConfigs) map[string]interface{} {
 	m := make(map[string]interface{})
 
 	for i, f := range dataCfg.Fields {
-		m[f] = d.Body[i]
+		if dataCfg.Unique.Key != `` && f == dataCfg.Unique.Key {
+			m["_key"] = d.body[i]
+		}
+		m[f] = d.body[i]
 	}
 
 	return m

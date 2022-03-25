@@ -2,6 +2,7 @@ package arangodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
@@ -11,6 +12,7 @@ import (
 	traceableContext "github.com/tryfix/traceable-context"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type arangodb struct {
@@ -88,17 +90,33 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 
 		fmt.Printf("\rSending data: %d/%d", i+1, len(values))
 
-		d := data{Body: val}
+		d := data{body: val}
 
 		wg.Add(1)
 		go func(val []string) {
 			defer wg.Done()
-			_, err = coll.CreateDocument(ctx, d.Map(dataCfg))
+			doc := d.doc(dataCfg)
+			_, err = coll.CreateDocument(ctx, doc)
 			if err != nil {
+				arangoErr, ok := driver.AsArangoError(err)
+				if !ok {
+					log.Error(errors.New("(non-arangodb error) " + err.Error()))
+					return
+				}
+
+				// update the document if key already exists
+				if driver.IsArangoErrorWithCode(arangoErr, 409) {
+					_, err = coll.UpdateDocument(ctx, val[dataCfg.Unique.Index], doc)
+					if err != nil {
+						log.Error(err)
+						return
+					}
+					atomic.AddUint64(&success, 1)
+					return
+				}
 				log.Error(err)
 				return
 			}
-
 			atomic.AddUint64(&success, 1)
 		}(val)
 	}
@@ -109,6 +127,96 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 }
 
 func (a *arangodb) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+
+	// setting up ids
+	var ids []string
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+	}
+
+	coll, err := a.db.Collection(ctx, dataCfg.TableName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testStartedTime := time.Now()
+	for _, id := range ids {
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			doc := make(map[string]interface{})
+			startedTime := time.Now()
+			_, err = coll.ReadDocument(ctx, id, &doc)
+			elapsedTime := time.Since(startedTime).Microseconds()
+			if err != nil {
+				log.Error(err)
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(id)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }
+
 func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+
+	// setting up ids
+	var ids []string
+	var rValues []map[string]interface{}
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+		rValues = append(rValues, data{body: val}.doc(dataCfg))
+	}
+
+	coll, err := a.db.Collection(ctx, dataCfg.TableName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	testStartedTime := time.Now()
+	for i, val := range rValues {
+		wg.Add(1)
+		go func(i int, val map[string]interface{}) {
+			defer wg.Done()
+			var startedTime time.Time
+			var elapsedTime int64
+
+			switch testCfg.Typ {
+			case domain.BenchmarkWrite:
+				startedTime = time.Now()
+				_, err = coll.CreateDocument(ctx, val)
+				elapsedTime = time.Since(startedTime).Microseconds()
+				if err != nil {
+					log.Error(err)
+					return
+				}
+			case domain.BenchmarkUpdate:
+				startedTime = time.Now()
+				_, err = coll.UpdateDocument(ctx, ids[i], val)
+				elapsedTime = time.Since(startedTime).Microseconds()
+				if err != nil {
+					log.Error(err)
+					return
+				}
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(i, val)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }

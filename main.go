@@ -17,11 +17,11 @@ func main() {
 	case domain.Redis:
 		db = redis.Client()
 	case domain.Neo4j:
-		neo4j.Client()
+		db = neo4j.Client()
 	case domain.ElasticSearch:
-		elasticsearch.Client()
+		db = elasticsearch.Client()
 	case domain.ArangoDB:
-		arangodb.Client()
+		db = arangodb.Client()
 	}
 
 	db = db.Init(dbCfg)
@@ -34,6 +34,8 @@ func main() {
 	case domain.BenchmarkRead:
 		db.BenchmarkRead(values[:testCfg.Load], dataCfg, testCfg)
 	case domain.BenchmarkWrite:
+		db.BenchmarkWrite(values[:testCfg.Load], dataCfg, testCfg)
+	case domain.BenchmarkUpdate:
 		db.BenchmarkWrite(values[:testCfg.Load], dataCfg, testCfg)
 	}
 }

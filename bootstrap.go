@@ -68,8 +68,8 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 			log.Fatalln(`load size should be specified for benchmark test`)
 		}
 
-		if *testType != domain.BenchmarkRead && *testType != domain.BenchmarkWrite {
-			log.Fatalln(`test type should either be read or write`)
+		if *testType != domain.BenchmarkRead && *testType != domain.BenchmarkWrite && *testType != domain.BenchmarkUpdate {
+			log.Fatalln(`test type should either be read or write or update (for arangodb only)`)
 		}
 	}
 

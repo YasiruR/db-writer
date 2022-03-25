@@ -10,8 +10,9 @@ const (
 
 // benchmark types
 const (
-	BenchmarkRead  = `read`
-	BenchmarkWrite = `write`
+	BenchmarkRead   = `read`
+	BenchmarkWrite  = `write`
+	BenchmarkUpdate = `update`
 )
 
 type Database interface {
