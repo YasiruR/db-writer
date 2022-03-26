@@ -41,14 +41,17 @@ Additional parameter may be required if you are writing data to the database ini
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -ca=./http_ca.crt -limit=10`
 
-#### 2. Test mode
+#### 2. Test mode*
 
 Following parameters are required, if you are performing benchmark tests.
 
-- benchmark: operation of the benchmark test [read / write / update (only for arangoDB)]
+- benchmark: operation of the benchmark test [read / write / update**]
 - load: number of entries to be used by the test as a burst of requests
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -benchmark=read -load=100000`
+
+*Not supported for neo4j yet
+**Update will only be used in arangoDB in cases where writes overwrite the existing data
 
 ## Elasticsearch Guide
 
