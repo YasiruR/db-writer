@@ -76,7 +76,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 		}
 
 		req := goEsApi.IndexRequest{
-			Index:      dataCfg.TableName,
+			Index:      dataCfg.Table,
 			DocumentID: docID,
 			Body:       strings.NewReader(jsonVal),
 			Refresh:    "true",
@@ -133,7 +133,7 @@ func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConf
 			startedTime := time.Now()
 			res, err := e.db.Search(
 				e.db.Search.WithContext(ctx),
-				e.db.Search.WithIndex(dataCfg.TableName),
+				e.db.Search.WithIndex(dataCfg.Table),
 				e.db.Search.WithBody(&q),
 				e.db.Search.WithTrackTotalHits(true),
 				e.db.Search.WithPretty())
@@ -195,7 +195,7 @@ func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataCon
 		}
 
 		req := goEsApi.IndexRequest{
-			Index:      dataCfg.TableName,
+			Index:      dataCfg.Table,
 			DocumentID: docID,
 			Body:       strings.NewReader(jsonVal),
 			Refresh:    "true",

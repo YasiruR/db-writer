@@ -64,7 +64,7 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 	wg := &sync.WaitGroup{}
 	var success uint64
 
-	collExists, err := a.db.CollectionExists(ctx, dataCfg.TableName)
+	collExists, err := a.db.CollectionExists(ctx, dataCfg.Table)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,12 +72,12 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 	var coll driver.Collection
 	switch collExists {
 	case true:
-		coll, err = a.db.Collection(ctx, dataCfg.TableName)
+		coll, err = a.db.Collection(ctx, dataCfg.Table)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case false:
-		coll, err = a.db.CreateCollection(ctx, dataCfg.TableName, &driver.CreateCollectionOptions{})
+		coll, err = a.db.CreateCollection(ctx, dataCfg.Table, &driver.CreateCollectionOptions{})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -95,7 +95,7 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 		wg.Add(1)
 		go func(val []string) {
 			defer wg.Done()
-			doc := d.doc(dataCfg)
+			doc := d.document(dataCfg)
 			_, err = coll.CreateDocument(ctx, doc)
 			if err != nil {
 				arangoErr, ok := driver.AsArangoError(err)
@@ -137,7 +137,7 @@ func (a *arangodb) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, 
 		ids = append(ids, val[dataCfg.Unique.Index])
 	}
 
-	coll, err := a.db.Collection(ctx, dataCfg.TableName)
+	coll, err := a.db.Collection(ctx, dataCfg.Table)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -176,10 +176,10 @@ func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs,
 	var rValues []map[string]interface{}
 	for _, val := range values {
 		ids = append(ids, val[dataCfg.Unique.Index])
-		rValues = append(rValues, data{body: val}.doc(dataCfg))
+		rValues = append(rValues, data{body: val}.document(dataCfg))
 	}
 
-	coll, err := a.db.Collection(ctx, dataCfg.TableName)
+	coll, err := a.db.Collection(ctx, dataCfg.Table)
 	if err != nil {
 		log.Fatal(err)
 	}

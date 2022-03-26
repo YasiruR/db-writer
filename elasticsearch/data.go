@@ -48,3 +48,7 @@ func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 
 	return b.String()
 }
+
+func (d data) Str() string {
+	return fmt.Sprintf("%v", d)
+}

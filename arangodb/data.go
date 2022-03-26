@@ -53,7 +53,11 @@ func (d data) JSON(dataCfg domain.DataConfigs) (body string) {
 	return b.String()
 }
 
-func (d data) doc(dataCfg domain.DataConfigs) map[string]interface{} {
+func (d data) Str() string {
+	return fmt.Sprintf("%v", d)
+}
+
+func (d data) document(dataCfg domain.DataConfigs) map[string]interface{} {
 	m := make(map[string]interface{})
 
 	for i, f := range dataCfg.Fields {

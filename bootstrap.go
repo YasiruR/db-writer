@@ -45,7 +45,7 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 		*pw = getPw()
 	}
 
-	dataCfg = domain.DataConfigs{TableName: *table, Unique: struct {
+	dataCfg = domain.DataConfigs{Table: *table, Unique: struct {
 		Key   string
 		Index int
 	}{Key: *key, Index: -1}, Limit: *limit}
@@ -114,8 +114,8 @@ func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *dom
 			fmt.Println(`Documents will be indexed iteratively since no unique key is provided`)
 		}
 
-		if dataCfg.TableName == `` {
-			dataCfg.TableName = `my_index`
+		if dataCfg.Table == `` {
+			dataCfg.Table = `my_index`
 			fmt.Println(`Index name set as my_table by default since not provided explicitly`)
 		}
 
@@ -125,8 +125,8 @@ func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *dom
 	}
 
 	if dbCfg.Typ == domain.ArangoDB {
-		if dataCfg.TableName == `` {
-			dataCfg.TableName = `my_collection`
+		if dataCfg.Table == `` {
+			dataCfg.Table = `my_collection`
 			fmt.Println(`Table name set as my_collection by default since not provided explicitly`)
 		}
 
@@ -143,6 +143,10 @@ func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *dom
 
 		if testCfg.Typ != domain.BenchmarkRead && testCfg.Typ != domain.BenchmarkWrite && testCfg.Typ != domain.BenchmarkUpdate {
 			log.Fatalln(`test type should either be read or write or update (for arangodb only)`)
+		}
+
+		if testCfg.Typ == domain.Neo4j {
+			log.Fatalln(`benchmark for neo4j is not yet supported`)
 		}
 	}
 }
