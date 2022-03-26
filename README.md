@@ -50,7 +50,7 @@ Following parameters are required, if you are performing benchmark tests.
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -benchmark=read -load=100000`
 
-*Not supported for neo4j yet
+*Not supported for neo4j yet <br/>
 **Update will only be used in arangoDB in cases where writes overwrite the existing data
 
 ## Elasticsearch Guide
