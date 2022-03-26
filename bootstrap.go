@@ -115,7 +115,7 @@ func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *dom
 		}
 
 		if dataCfg.TableName == `` {
-			dataCfg.TableName = `my_table`
+			dataCfg.TableName = `my_index`
 			fmt.Println(`Index name set as my_table by default since not provided explicitly`)
 		}
 

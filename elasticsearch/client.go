@@ -89,7 +89,6 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 
 		if res.IsError() {
 			log.Error(errors.New(res.String()))
-			fmt.Println()
 		} else {
 			atomic.AddUint64(&success, 1)
 		}
@@ -180,4 +179,55 @@ func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConf
 }
 
 func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+
+	// setting up indexes
+	var reqs []goEsApi.IndexRequest
+	for i, val := range values {
+		jsonVal := data{Body: val}.JSON(dataCfg)
+		var docID string
+		if dataCfg.Unique.Index < 0 {
+			docID = strconv.Itoa(i + 1)
+		} else {
+			docID = val[dataCfg.Unique.Index]
+		}
+
+		req := goEsApi.IndexRequest{
+			Index:      dataCfg.TableName,
+			DocumentID: docID,
+			Body:       strings.NewReader(jsonVal),
+			Refresh:    "true",
+		}
+
+		reqs = append(reqs, req)
+	}
+
+	testStartedTime := time.Now()
+	for _, req := range reqs {
+		wg.Add(1)
+		go func(req goEsApi.IndexRequest) {
+			defer wg.Done()
+			startedTime := time.Now()
+			res, err := req.Do(ctx, e.db)
+			elapsedTime := time.Since(startedTime).Microseconds()
+			if err != nil {
+				log.Error(err)
+			}
+
+			defer res.Body.Close()
+			if res.IsError() {
+				log.Error(errors.New(res.String()))
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(req)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }
