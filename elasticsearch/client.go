@@ -76,7 +76,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 		}
 
 		req := goEsApi.IndexRequest{
-			Index:      dataCfg.Table,
+			Index:      dataCfg.Table, // todo change to database
 			DocumentID: docID,
 			Body:       strings.NewReader(jsonVal),
 			Refresh:    "true",
@@ -195,7 +195,7 @@ func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataCon
 		}
 
 		req := goEsApi.IndexRequest{
-			Index:      dataCfg.Table,
+			Index:      dataCfg.Table, // todo change to database
 			DocumentID: docID,
 			Body:       strings.NewReader(jsonVal),
 			Refresh:    "true",

@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -34,9 +35,12 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 	dbName := flag.String(`dbname`, ``, `database name for arangodb [_system will be used if omitted]`)
 	testType := flag.String(`benchmark`, ``, `functionality to be tested with a load (read/write)`)
 	loadSize := flag.Int(`load`, 0, `batch size of the benchmark test`)
+	txSizeList := flag.String(`txsize`, ``, `filter benchmark requests by sizes of transactions [when writing to database]`)
+	txBuf := flag.Int(`txbuf`, 10, `buffer size for filtering transactions [default=5]`)
 
 	flag.Parse()
 
+	// get host addresses (and password if hidden enabled)
 	h := hosts(*hostAddr)
 	if *pwHide {
 		if *pw != `` {
@@ -51,7 +55,7 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 	}{Key: *key, Index: -1}, Limit: *limit}
 
 	dbCfg = domain.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}
-	testCfg = domain.TestConfigs{Database: *db, Typ: *testType, Load: *loadSize}
+	testCfg = domain.TestConfigs{Database: *db, Typ: *testType, Load: *loadSize, TxSizes: txSizes(*txSizeList), TxBuffer: *txBuf}
 
 	validate(&dbCfg, &dataCfg, &testCfg, *data)
 
@@ -81,10 +85,26 @@ func getPw() (pw string) {
 func hosts(arg string) []string {
 	list := strings.Split(arg, `,`)
 	if len(list) == 0 {
-		log.Fatalln(`host list is empty`)
+		log.Fatalln(`host address list is empty`)
 	}
 
 	return list
+}
+
+func txSizes(arg string) (sizes []int) {
+	list := strings.Split(arg, `,`)
+	if len(list) == 0 {
+		return
+	}
+
+	for _, s := range list {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			log.Fatalln(`[invalid character found in transaction list] ` + err.Error())
+		}
+		sizes = append(sizes, val)
+	}
+	return
 }
 
 func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *domain.TestConfigs, csvPath string) {

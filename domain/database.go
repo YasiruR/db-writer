@@ -35,4 +35,6 @@ type TestConfigs struct {
 	Database string
 	Typ      string
 	Load     int
+	TxSizes  []int
+	TxBuffer int // todo
 }
