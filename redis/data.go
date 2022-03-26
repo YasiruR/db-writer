@@ -2,7 +2,7 @@ package redis
 
 import (
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 )
 
 type data struct {
@@ -13,6 +13,10 @@ func (d data) MarshalBinary() ([]byte, error) {
 	return []byte(fmt.Sprintf("%v", d)), nil
 }
 
-func (d data) JSON(_ generic.DataConfigs) (body string) {
+func (d data) JSON(_ domain.DataConfigs) (body string) {
 	return ""
+}
+
+func (d data) Str() string {
+	return fmt.Sprintf("%v", d)
 }

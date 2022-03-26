@@ -2,7 +2,7 @@ package neo4j
 
 import (
 	"fmt"
-	"github.com/YasiruR/db-writer/generic"
+	"github.com/YasiruR/db-writer/domain"
 	"github.com/YasiruR/db-writer/log"
 	goNeo4j "github.com/neo4j/neo4j-go-driver/v4/neo4j"
 	"sync"
@@ -17,11 +17,11 @@ type neo4j struct {
 	paramChan chan map[string]interface{}
 }
 
-func Client() generic.Database {
+func Client() domain.Database {
 	return &neo4j{paramChan: make(chan map[string]interface{}, bufferSize)}
 }
 
-func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
+func (n *neo4j) Init(cfg domain.DBConfigs) domain.Database {
 	// todo check cluster
 	db, err := goNeo4j.NewDriver(`bolt://`+cfg.Hosts[0], goNeo4j.BasicAuth(cfg.Username, cfg.Passwd, ``))
 	if err != nil {
@@ -34,7 +34,7 @@ func (n *neo4j) Init(cfg generic.DBConfigs) generic.Database {
 	return n
 }
 
-func (n *neo4j) Write(values [][]string, dataCfg generic.DataConfigs) {
+func (n *neo4j) Write(values [][]string, dataCfg domain.DataConfigs) {
 	wg := &sync.WaitGroup{}
 	var success uint64
 	n.setTx(dataCfg.Fields)
@@ -95,4 +95,9 @@ func (n *neo4j) insertFunc(tx goNeo4j.Transaction) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+func (n *neo4j) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+}
+func (n *neo4j) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
 }

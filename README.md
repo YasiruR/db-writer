@@ -1,6 +1,8 @@
 # _db-writer_
 
-db-writer is a golang implementation to deploy datasets in csv format to databases.
+db-writer is a golang implementation which supports,
+1. deploying datasets in csv format to databases
+2. benchmarking databases with read and write operations.
 
 ### Supported databases
 
@@ -20,17 +22,36 @@ db-writer is a golang implementation to deploy datasets in csv format to databas
 - pw: password of the database user [OPTIONAL]
 - pwhide: true if the password is sensitive [OPTIONAL]
 - ca: path of the CA certificate file [only for elasticsearch]
-- unique: unique key of the database
-  - redis - required
-  - neo4j - not required
-  - elasticsearch - required, but if omitted documents will be indexed by (1,n]
-- limit: number of data items to be stored [if omitted, all data in csv file will be stored]
 - table: name of the collection/table
-  - only required for arangodb [if omitted, `my_collection` will be used]
+  - arangoDB - required [if omitted, `my_collection` will be used]
+  - elasticsearch - required [if omitted, `my_index` will be used]
 - dname: name of the database
   - only required for arangodb [if omitted, `_system` will be used]
+- unique: unique key of the database
+  - redis - required
+  - arangoDB - required
+  - neo4j - not required
+  - elasticsearch - required, but if omitted documents will be indexed by (1,n]
+
+#### 1. Store mode
+
+Additional parameter may be required if you are writing data to the database initially.
+
+- limit: number of data items to be stored [if omitted, all data in csv file will be stored]
 
 eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -ca=./http_ca.crt -limit=10`
+
+#### 2. Test mode*
+
+Following parameters are required, if you are performing benchmark tests.
+
+- benchmark: operation of the benchmark test [read / write / update**]
+- load: number of entries to be used by the test as a burst of requests
+
+eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/YasiruR/db-writer/data/people.csv -uname=test-user -pw=1234 -benchmark=read -load=100000`
+
+*Not supported for neo4j yet <br/>
+**Update will only be used in arangoDB in cases where writes overwrite the existing data
 
 ## Elasticsearch Guide
 
@@ -49,6 +70,8 @@ eg: `./writer -host=https://localhost:9200 -db=elasticsearch -csv=./github.com/Y
   - `curl -H 'Content-Type: application/json' --cacert ./http_ca.crt -X GET https://localhost:9200/<index>/_search?pretty -u <username>:<password>`
 - Get document by ID
   - `curl -H 'Content-Type: application/json' --cacert ./http_ca.crt -X GET https://localhost:9200/<index>/_doc/<id> -u <username>:<password>`
+- Delete an entire index
+  - `curl -X DELETE --cacert ./http_ca.crt https://localhost:9200/<index> -u <username>:<password>`
 
 ## Redis Guide
 

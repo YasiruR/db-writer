@@ -1,4 +1,5 @@
 vendor
 .idea
 data/*.csv
+data/.*.csv#
 writer

@@ -1,4 +1,4 @@
-package generic
+package domain
 
 // database types
 const (
@@ -6,12 +6,20 @@ const (
 	Neo4j         = `neo4j`
 	ElasticSearch = `elasticsearch`
 	ArangoDB      = `arangodb`
-	Couchbase     = `couchbase`
+)
+
+// benchmark types
+const (
+	BenchmarkRead   = `read`
+	BenchmarkWrite  = `write`
+	BenchmarkUpdate = `update`
 )
 
 type Database interface {
 	Init(cfg DBConfigs) Database
 	Write(values [][]string, cfg DataConfigs)
+	BenchmarkRead(values [][]string, dataCfg DataConfigs, testCfg TestConfigs)
+	BenchmarkWrite(values [][]string, dataCfg DataConfigs, testCfg TestConfigs)
 }
 
 type DBConfigs struct {
@@ -21,4 +29,10 @@ type DBConfigs struct {
 	Passwd   string
 	CACert   string
 	Name     string
+}
+
+type TestConfigs struct {
+	Database string
+	Typ      string
+	Load     int
 }
