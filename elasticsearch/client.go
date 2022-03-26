@@ -1,6 +1,8 @@
 package elasticsearch
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/YasiruR/db-writer/domain"
@@ -12,7 +14,9 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const index = `elastic-db`
@@ -72,7 +76,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 		}
 
 		req := goEsApi.IndexRequest{
-			Index:      index,
+			Index:      dataCfg.TableName,
 			DocumentID: docID,
 			Body:       strings.NewReader(jsonVal),
 			Refresh:    "true",
@@ -97,6 +101,83 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 }
 
 func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+
+	var queries []bytes.Buffer
+	var ids []string
+	for _, val := range values {
+		var buf bytes.Buffer
+		query := map[string]interface{}{
+			"query": map[string]interface{}{
+				"match": map[string]interface{}{
+					dataCfg.Unique.Key: val[dataCfg.Unique.Index],
+				},
+			},
+		}
+
+		if err := json.NewEncoder(&buf).Encode(query); err != nil {
+			log.Error(err)
+			continue
+		}
+
+		queries = append(queries, buf)
+		ids = append(ids, val[dataCfg.Unique.Index])
+	}
+
+	testStartedTime := time.Now()
+	for i, q := range queries {
+		wg.Add(1)
+		go func(i int, q bytes.Buffer) {
+			defer wg.Done()
+			startedTime := time.Now()
+			res, err := e.db.Search(
+				e.db.Search.WithContext(ctx),
+				e.db.Search.WithIndex(dataCfg.TableName),
+				e.db.Search.WithBody(&q),
+				e.db.Search.WithTrackTotalHits(true),
+				e.db.Search.WithPretty())
+			elapsedTime := time.Since(startedTime).Microseconds()
+
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			defer res.Body.Close()
+
+			if res.IsError() {
+				var errMap map[string]interface{}
+				if err = json.NewDecoder(res.Body).Decode(&errMap); err != nil {
+					log.Error(err, "Error parsing the response body")
+					return
+				}
+
+				// Print the response status and error information.
+				log.Error(errors.New(
+					fmt.Sprintf("[%s] %s: %s",
+						res.Status(),
+						errMap["error"].(map[string]interface{})["type"],
+						errMap["error"].(map[string]interface{})["reason"])),
+				)
+				return
+			}
+
+			var resData map[string]interface{}
+			if err = json.NewDecoder(res.Body).Decode(&resData); err != nil {
+				log.Error(err, "Error parsing the response body")
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(i, q)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
 }
+
 func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
 }

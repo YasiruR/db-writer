@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	banner()
 	dbCfg, dataCfg, testCfg, file := parseArg()
 	values := readData(file, &dataCfg)
 
