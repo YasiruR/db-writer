@@ -108,6 +108,7 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 }
 
 func (a *arangodb) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	values = values[:testCfg.Load]
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -148,6 +149,10 @@ func (a *arangodb) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, 
 }
 
 func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	if len(testCfg.TxSizes) == 0 {
+		values = values[:testCfg.Load]
+	}
+
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -197,6 +202,10 @@ func (a *arangodb) getData(values [][]string, dataCfg domain.DataConfigs, testCf
 	// if tx sizes are provided, filter the inputs
 	if len(testCfg.TxSizes) != 0 {
 		for _, val := range values {
+			if len(ids) == testCfg.Load {
+				return
+			}
+
 			d = data{body: val}
 			dataSize := len(d.Str())
 

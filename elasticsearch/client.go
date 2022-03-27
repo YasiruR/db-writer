@@ -100,6 +100,7 @@ func (e *elasticsearch) Write(values [][]string, dataCfg domain.DataConfigs) {
 }
 
 func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	values = values[:testCfg.Load]
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -179,6 +180,10 @@ func (e *elasticsearch) BenchmarkRead(values [][]string, dataCfg domain.DataConf
 }
 
 func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	if len(testCfg.TxSizes) == 0 {
+		values = values[:testCfg.Load]
+	}
+
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
