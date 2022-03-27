@@ -10,13 +10,22 @@ import (
 )
 
 func Output(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, aggrLatency uint64, persist bool) {
-
-	fmt.Println()
-	fmt.Println("========= Load Test Results (" + cfg.Typ + ") ==========")
+	fmt.Println("\n========= Load Test Results (" + cfg.Typ + ") ==========")
 	fmt.Println("successful ops: ", successCount)
 	fmt.Println("total time taken (micro seconds): ", totalElapsedTime)
-	fmt.Println("throughput (req/s) : ", successCount*1e6/totalElapsedTime) // todo check if success or total
-	fmt.Println("average latency (micro seconds): ", float64(aggrLatency)/float64(successCount*1e3))
+	if totalElapsedTime != 0 {
+		fmt.Println("throughput (req/s) : ", successCount*1e6/totalElapsedTime) // todo check if success or total
+	} else {
+		fmt.Println("throughput: batch size is too small :(")
+		return
+	}
+
+	if successCount != 0 {
+		fmt.Println("average latency (micro seconds): ", float64(aggrLatency)/float64(successCount*1e3))
+	} else {
+		fmt.Println("average latency: success counts were too few :(")
+		return
+	}
 
 	if persist == false {
 		return
@@ -62,7 +71,8 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 		}
 	} else {
 		data = append(data, []string{`database`, `operation`, `load`, `success count`, `total test duration (micro seconds)`,
-			`aggregated latency (micro seconds)`, `throughput (req/s)`, ` average latency (ms)`})
+			`aggregated latency (micro seconds)`, `throughput (req/s)`, ` average latency (ms)`, `transaction sizes (bytes)`,
+			`transaction buffer (bytes)`})
 	}
 
 	f, err := os.Create(fileName)
@@ -71,10 +81,17 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 	}
 	w := csv.NewWriter(f)
 
+	// set tx buf
+	txBuf := strconv.Itoa(cfg.TxBuffer)
+	if len(cfg.TxSizes) == 0 {
+		txBuf = `-`
+	}
+
 	// appending new data
 	data = append(data, []string{cfg.Database, cfg.Typ, strconv.Itoa(cfg.Load), strconv.Itoa(int(successCount)),
 		strconv.Itoa(int(totalElapsedTime)), strconv.Itoa(int(aggrLatency)), strconv.Itoa(int(successCount * 1e6 / totalElapsedTime)),
-		strconv.FormatFloat(float64(aggrLatency)/float64(successCount*1e3), 'f', -1, 64)})
+		strconv.FormatFloat(float64(aggrLatency)/float64(successCount*1e3), 'f', -1, 64),
+		intSliceToString(cfg.TxSizes), txBuf})
 
 	err = w.WriteAll(data)
 	if err != nil {
@@ -88,4 +105,21 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func intSliceToString(slice []int) (s string) {
+	if len(slice) == 0 {
+		return `-`
+	}
+
+	s = `[`
+	for i, ele := range slice {
+		s += strconv.Itoa(ele)
+		if i != len(slice)-1 {
+			s += `,`
+		}
+	}
+	s += `]`
+
+	return
 }

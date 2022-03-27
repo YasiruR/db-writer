@@ -1,13 +1,15 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/YasiruR/db-writer/domain"
+	"github.com/YasiruR/db-writer/log"
 	log2 "github.com/YasiruR/db-writer/log"
 	"golang.org/x/crypto/ssh/terminal"
-	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -34,13 +36,16 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 	dbName := flag.String(`dbname`, ``, `database name for arangodb [_system will be used if omitted]`)
 	testType := flag.String(`benchmark`, ``, `functionality to be tested with a load (read/write)`)
 	loadSize := flag.Int(`load`, 0, `batch size of the benchmark test`)
+	txSizeList := flag.String(`txsize`, ``, `filter benchmark requests by sizes of transactions [when writing to database]`)
+	txBuf := flag.Int(`txbuf`, 10, `buffer size for filtering transactions [default=5]`)
 
 	flag.Parse()
 
+	// get host addresses (and password if hidden enabled)
 	h := hosts(*hostAddr)
 	if *pwHide {
 		if *pw != `` {
-			log.Fatalln(`password has already been provided`)
+			log.Fatal(errors.New(`password has already been provided`))
 		}
 		*pw = getPw()
 	}
@@ -51,7 +56,7 @@ func parseArg() (dbCfg domain.DBConfigs, dataCfg domain.DataConfigs, testCfg dom
 	}{Key: *key, Index: -1}, Limit: *limit}
 
 	dbCfg = domain.DBConfigs{Typ: *db, Hosts: h, Username: *uname, Passwd: *pw, CACert: *caCert, Name: *dbName}
-	testCfg = domain.TestConfigs{Database: *db, Typ: *testType, Load: *loadSize}
+	testCfg = domain.TestConfigs{Database: *db, Typ: *testType, Load: *loadSize, TxSizes: txSizes(*txSizeList), TxBuffer: *txBuf}
 
 	validate(&dbCfg, &dataCfg, &testCfg, *data)
 
@@ -81,32 +86,48 @@ func getPw() (pw string) {
 func hosts(arg string) []string {
 	list := strings.Split(arg, `,`)
 	if len(list) == 0 {
-		log.Fatalln(`host list is empty`)
+		log.Fatal(errors.New(`host address list is empty`))
 	}
 
 	return list
 }
 
+func txSizes(arg string) (sizes []int) {
+	list := strings.Split(arg, `,`)
+	if len(list) == 0 || arg == `` {
+		return
+	}
+
+	for _, s := range list {
+		val, err := strconv.Atoi(s)
+		if err != nil {
+			log.Fatal(errors.New(`[invalid character found in transaction list] ` + err.Error()))
+		}
+		sizes = append(sizes, val)
+	}
+	return
+}
+
 func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *domain.TestConfigs, csvPath string) {
 	if dbCfg.Typ == `` {
-		log.Fatalln(`database type can not be null`)
+		log.Fatal(errors.New(`database type can not be null`))
 	}
 
 	if len(dbCfg.Hosts) == 0 {
-		log.Fatalln(`host addresses can not be null`)
+		log.Fatal(errors.New(`host addresses can not be null`))
 	}
 
 	if csvPath == `` {
-		log.Fatalln(`csv file path should be provided`)
+		log.Fatal(errors.New(`csv file path should be provided`))
 	}
 
 	if dbCfg.Typ == domain.Redis && dataCfg.Unique.Key == `` {
-		log.Fatalln(`unique key field should be provided for redis`)
+		log.Fatal(errors.New(`unique key field should be provided for redis`))
 	}
 
 	if dbCfg.Typ != domain.Redis && dbCfg.Typ != domain.Neo4j &&
 		dbCfg.Typ != domain.ElasticSearch && dbCfg.Typ != domain.ArangoDB {
-		log.Fatalln(`invalid database`)
+		log.Fatal(errors.New(`invalid database`))
 	}
 
 	if dbCfg.Typ == domain.ElasticSearch {
@@ -138,15 +159,15 @@ func validate(dbCfg *domain.DBConfigs, dataCfg *domain.DataConfigs, testCfg *dom
 
 	if testCfg.Typ != `` {
 		if testCfg.Load == 0 {
-			log.Fatalln(`load size should be specified for benchmark test`)
+			log.Fatal(errors.New(`load size should be specified for benchmark test`))
 		}
 
 		if testCfg.Typ != domain.BenchmarkRead && testCfg.Typ != domain.BenchmarkWrite && testCfg.Typ != domain.BenchmarkUpdate {
-			log.Fatalln(`test type should either be read or write or update (for arangodb only)`)
+			log.Fatal(errors.New(`test type should either be read or write or update (for arangodb only)`))
 		}
 
 		if testCfg.Typ == domain.Neo4j {
-			log.Fatalln(`benchmark for neo4j is not yet supported`)
+			log.Fatal(errors.New(`benchmark for neo4j is not yet supported`))
 		}
 	}
 }

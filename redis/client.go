@@ -148,14 +148,7 @@ func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, te
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
-
-	// setting up ids
-	var ids []string
-	var rValues []data
-	for _, val := range values {
-		ids = append(ids, val[dataCfg.Unique.Index])
-		rValues = append(rValues, data{body: val})
-	}
+	ids, rValues := r.getData(values, dataCfg, testCfg)
 
 	testStartedTime := time.Now()
 	for i, val := range rValues {
@@ -179,4 +172,37 @@ func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, te
 	wg.Wait()
 	totalDurMicSec := time.Since(testStartedTime).Microseconds()
 	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+}
+
+func (r *redis) getData(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) (ids []string, rValues []data) {
+	var d data
+
+	// if tx sizes are provided, filter the inputs
+	if len(testCfg.TxSizes) != 0 {
+		for _, val := range values {
+			d = data{body: val}
+			dataSize := len(d.Str())
+
+			for _, txSize := range testCfg.TxSizes {
+				var upper, lower int
+				upper = txSize + testCfg.TxBuffer
+				lower = txSize - testCfg.TxBuffer
+				if lower < dataSize && dataSize < upper {
+					ids = append(ids, val[dataCfg.Unique.Index])
+					rValues = append(rValues, d)
+					break
+				}
+			}
+		}
+
+		return
+	}
+
+	// if no tx size filtering add all given data
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+		rValues = append(rValues, data{body: val})
+	}
+
+	return
 }
