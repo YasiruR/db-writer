@@ -182,9 +182,74 @@ func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataCon
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
+	reqs := e.getData(values, dataCfg, testCfg)
 
-	// setting up indexes
-	var reqs []goEsApi.IndexRequest
+	testStartedTime := time.Now()
+	for _, req := range reqs {
+		wg.Add(1)
+		go func(req goEsApi.IndexRequest) {
+			defer wg.Done()
+			startedTime := time.Now()
+			res, err := req.Do(ctx, e.db)
+			elapsedTime := time.Since(startedTime).Microseconds()
+			if err != nil {
+				log.Error(err)
+				return
+			}
+
+			defer res.Body.Close()
+			if res.IsError() {
+				log.Error(errors.New(res.String()))
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(req)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+}
+
+func (e *elasticsearch) getData(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) (reqs []goEsApi.IndexRequest) {
+	var d data
+	// if tx sizes are provided, filter the inputs
+	if len(testCfg.TxSizes) != 0 {
+		for i, val := range values {
+			d = data{Body: val}
+			dataSize := len(d.Str())
+
+			for _, txSize := range testCfg.TxSizes {
+				var upper, lower int
+				upper = txSize + testCfg.TxBuffer
+				lower = txSize - testCfg.TxBuffer
+				if lower < dataSize && dataSize < upper {
+					var docID string
+					if dataCfg.Unique.Index < 0 {
+						docID = strconv.Itoa(i + 1)
+					} else {
+						docID = val[dataCfg.Unique.Index]
+					}
+
+					req := goEsApi.IndexRequest{
+						Index:      dataCfg.Table, // todo change to database
+						DocumentID: docID,
+						Body:       strings.NewReader(d.JSON(dataCfg)),
+						Refresh:    "true",
+					}
+
+					reqs = append(reqs, req)
+					break
+				}
+			}
+		}
+
+		return
+	}
+
+	// if no tx size filtering add all given indexes
 	for i, val := range values {
 		jsonVal := data{Body: val}.JSON(dataCfg)
 		var docID string
@@ -204,30 +269,5 @@ func (e *elasticsearch) BenchmarkWrite(values [][]string, dataCfg domain.DataCon
 		reqs = append(reqs, req)
 	}
 
-	testStartedTime := time.Now()
-	for _, req := range reqs {
-		wg.Add(1)
-		go func(req goEsApi.IndexRequest) {
-			defer wg.Done()
-			startedTime := time.Now()
-			res, err := req.Do(ctx, e.db)
-			elapsedTime := time.Since(startedTime).Microseconds()
-			if err != nil {
-				log.Error(err)
-			}
-
-			defer res.Body.Close()
-			if res.IsError() {
-				log.Error(errors.New(res.String()))
-				return
-			}
-
-			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
-			atomic.AddUint64(&success, 1)
-		}(req)
-	}
-
-	wg.Wait()
-	totalDurMicSec := time.Since(testStartedTime).Microseconds()
-	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+	return
 }
