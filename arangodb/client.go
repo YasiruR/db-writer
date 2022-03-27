@@ -27,7 +27,6 @@ func (a *arangodb) Init(cfg domain.DBConfigs) domain.Database {
 	ctx := traceableContext.WithUUID(uuid.New())
 	conn, err := dbHttp.NewConnection(dbHttp.ConnectionConfig{Endpoints: cfg.Hosts})
 	if err != nil {
-		fmt.Println(`HOSTS: `, cfg.Hosts)
 		log.Fatal(err)
 	}
 
@@ -63,25 +62,7 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 	ctx := traceableContext.WithUUID(uuid.New())
 	wg := &sync.WaitGroup{}
 	var success uint64
-
-	collExists, err := a.db.CollectionExists(ctx, dataCfg.Table)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var coll driver.Collection
-	switch collExists {
-	case true:
-		coll, err = a.db.Collection(ctx, dataCfg.Table)
-		if err != nil {
-			log.Fatal(err)
-		}
-	case false:
-		coll, err = a.db.CreateCollection(ctx, dataCfg.Table, &driver.CreateCollectionOptions{})
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	coll := a.collection(ctx, dataCfg)
 
 	for i, val := range values {
 		if dataCfg.Limit >= 0 && dataCfg.Limit == i {
@@ -96,7 +77,7 @@ func (a *arangodb) Write(values [][]string, dataCfg domain.DataConfigs) {
 		go func(val []string) {
 			defer wg.Done()
 			doc := d.document(dataCfg)
-			_, err = coll.CreateDocument(ctx, doc)
+			_, err := coll.CreateDocument(ctx, doc)
 			if err != nil {
 				arangoErr, ok := driver.AsArangoError(err)
 				if !ok {
@@ -170,22 +151,11 @@ func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs,
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
-
-	// setting up ids
-	var ids []string
-	var rValues []map[string]interface{}
-	for _, val := range values {
-		ids = append(ids, val[dataCfg.Unique.Index])
-		rValues = append(rValues, data{body: val}.document(dataCfg))
-	}
-
-	coll, err := a.db.Collection(ctx, dataCfg.Table)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ids, docs := a.getData(values, dataCfg, testCfg)
+	coll := a.collection(ctx, dataCfg)
 
 	testStartedTime := time.Now()
-	for i, val := range rValues {
+	for i, val := range docs {
 		wg.Add(1)
 		go func(i int, val map[string]interface{}) {
 			defer wg.Done()
@@ -195,7 +165,7 @@ func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs,
 			switch testCfg.Typ {
 			case domain.BenchmarkWrite:
 				startedTime = time.Now()
-				_, err = coll.CreateDocument(ctx, val)
+				_, err := coll.CreateDocument(ctx, val)
 				elapsedTime = time.Since(startedTime).Microseconds()
 				if err != nil {
 					log.Error(err)
@@ -203,7 +173,7 @@ func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs,
 				}
 			case domain.BenchmarkUpdate:
 				startedTime = time.Now()
-				_, err = coll.UpdateDocument(ctx, ids[i], val)
+				_, err := coll.UpdateDocument(ctx, ids[i], val)
 				elapsedTime = time.Since(startedTime).Microseconds()
 				if err != nil {
 					log.Error(err)
@@ -219,4 +189,60 @@ func (a *arangodb) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs,
 	wg.Wait()
 	totalDurMicSec := time.Since(testStartedTime).Microseconds()
 	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+}
+
+func (a *arangodb) getData(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) (ids []string, docs []map[string]interface{}) {
+	var d data
+
+	// if tx sizes are provided, filter the inputs
+	if len(testCfg.TxSizes) != 0 {
+		for _, val := range values {
+			d = data{body: val}
+			dataSize := len(d.Str())
+
+			for _, txSize := range testCfg.TxSizes {
+				var upper, lower int
+				upper = txSize + testCfg.TxBuffer
+				lower = txSize - testCfg.TxBuffer
+				if lower < dataSize && dataSize < upper {
+					ids = append(ids, val[dataCfg.Unique.Index])
+					docs = append(docs, d.document(dataCfg))
+					break
+				}
+			}
+		}
+
+		return
+	}
+
+	// if no tx size filtering add all given data
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+		docs = append(docs, data{body: val}.document(dataCfg))
+	}
+
+	return
+}
+
+func (a *arangodb) collection(ctx context.Context, dataCfg domain.DataConfigs) driver.Collection {
+	collExists, err := a.db.CollectionExists(ctx, dataCfg.Table)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var coll driver.Collection
+	switch collExists {
+	case true:
+		coll, err = a.db.Collection(ctx, dataCfg.Table)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case false:
+		coll, err = a.db.CreateCollection(ctx, dataCfg.Table, &driver.CreateCollectionOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return coll
 }
