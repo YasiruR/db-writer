@@ -145,60 +145,64 @@ func (r *redis) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, tes
 }
 
 func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
-	//var aggrLatencyMicSec, success uint64
-	//wg := &sync.WaitGroup{}
-	//ctx := traceableContext.WithUUID(uuid.New())
+	var aggrLatencyMicSec, success uint64
+	wg := &sync.WaitGroup{}
+	ctx := traceableContext.WithUUID(uuid.New())
+	ids, rValues := r.getData(values, dataCfg, testCfg)
 
-	// setting up ids
-	rMap := make(map[int][]data)
-	for _, val := range values {
-		dataSize := len(data{body: val}.Str())
+	testStartedTime := time.Now()
+	for i, val := range rValues {
+		wg.Add(1)
+		go func(i int, val data) {
+			defer wg.Done()
+			startedTime := time.Now()
+			cmd := r.client.Set(ctx, ids[i], val, 0)
+			elapsedTime := time.Since(startedTime).Microseconds()
 
-		for _, txSize := range testCfg.TxSizes {
-			var upper, lower int
-			upper = txSize + testCfg.TxBuffer
-			lower = txSize - testCfg.TxBuffer
-			if lower < dataSize && dataSize < upper {
-				rMap[txSize] = append(rMap[txSize], data{body: val})
-				break
+			if cmd.Err() != nil {
+				log.Error(cmd.Err())
+				return
+			}
+
+			atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
+			atomic.AddUint64(&success, 1)
+		}(i, val)
+	}
+
+	wg.Wait()
+	totalDurMicSec := time.Since(testStartedTime).Microseconds()
+	log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+}
+
+func (r *redis) getData(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) (ids []string, rValues []data) {
+	var d data
+
+	// if tx sizes are provided, filter the inputs
+	if len(testCfg.TxSizes) != 0 {
+		for _, val := range values {
+			d = data{body: val}
+			dataSize := len(d.Str())
+
+			for _, txSize := range testCfg.TxSizes {
+				var upper, lower int
+				upper = txSize + testCfg.TxBuffer
+				lower = txSize - testCfg.TxBuffer
+				if lower < dataSize && dataSize < upper {
+					ids = append(ids, val[dataCfg.Unique.Index])
+					rValues = append(rValues, d)
+					break
+				}
 			}
 		}
+
+		return
 	}
 
-	fmt.Println("tx size: ", testCfg.TxSizes)
-
-	for k, v := range rMap {
-		fmt.Println("RMAPP: ", k, len(v))
+	// if no tx size filtering add all given data
+	for _, val := range values {
+		ids = append(ids, val[dataCfg.Unique.Index])
+		rValues = append(rValues, data{body: val})
 	}
 
-	// setting up ids
-	//var ids []string
-	//var rValues []data
-	//for _, val := range values {
-	//	ids = append(ids, val[dataCfg.Unique.Index])
-	//	rValues = append(rValues, data{body: val})
-	//}
-	//
-	//testStartedTime := time.Now()
-	//for i, val := range rValues {
-	//	wg.Add(1)
-	//	go func(i int, val data) {
-	//		defer wg.Done()
-	//		startedTime := time.Now()
-	//		cmd := r.client.Set(ctx, ids[i], val, 0)
-	//		elapsedTime := time.Since(startedTime).Microseconds()
-	//
-	//		if cmd.Err() != nil {
-	//			log.Error(cmd.Err())
-	//			return
-	//		}
-	//
-	//		atomic.AddUint64(&aggrLatencyMicSec, uint64(elapsedTime))
-	//		atomic.AddUint64(&success, 1)
-	//	}(i, val)
-	//}
-	//
-	//wg.Wait()
-	//totalDurMicSec := time.Since(testStartedTime).Microseconds()
-	//log.Output(testCfg, success, uint64(totalDurMicSec), aggrLatencyMicSec, true)
+	return
 }

@@ -41,6 +41,7 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 	var f *os.File
 	defer f.Close()
 
+	var line int
 	if fileExists(fileName) {
 		f, err := os.Open(fileName)
 		if err != nil {
@@ -49,6 +50,8 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 
 		r := csv.NewReader(f)
 		for {
+			line++
+			fmt.Println(line)
 			record, err := r.Read()
 			if err == io.EOF {
 				break
@@ -62,7 +65,8 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 		}
 	} else {
 		data = append(data, []string{`database`, `operation`, `load`, `success count`, `total test duration (micro seconds)`,
-			`aggregated latency (micro seconds)`, `throughput (req/s)`, ` average latency (ms)`})
+			`aggregated latency (micro seconds)`, `throughput (req/s)`, ` average latency (ms)`, `transaction sizes (bytes)`,
+			`transaction buffer (bytes)`})
 	}
 
 	f, err := os.Create(fileName)
@@ -74,7 +78,8 @@ func writeToCsv(cfg domain.TestConfigs, successCount uint64, totalElapsedTime, a
 	// appending new data
 	data = append(data, []string{cfg.Database, cfg.Typ, strconv.Itoa(cfg.Load), strconv.Itoa(int(successCount)),
 		strconv.Itoa(int(totalElapsedTime)), strconv.Itoa(int(aggrLatency)), strconv.Itoa(int(successCount * 1e6 / totalElapsedTime)),
-		strconv.FormatFloat(float64(aggrLatency)/float64(successCount*1e3), 'f', -1, 64)})
+		strconv.FormatFloat(float64(aggrLatency)/float64(successCount*1e3), 'f', -1, 64),
+		intSliceToString(cfg.TxSizes), strconv.Itoa(cfg.TxBuffer)})
 
 	err = w.WriteAll(data)
 	if err != nil {
@@ -88,4 +93,17 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func intSliceToString(slice []int) (s string) {
+	s = `[`
+	for i, ele := range slice {
+		s += strconv.Itoa(ele)
+		if i != len(slice)-1 {
+			s += `,`
+		}
+	}
+	s += `]`
+
+	return
 }
