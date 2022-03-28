@@ -103,6 +103,7 @@ func (r *redis) read(values [][]string, dataCfg domain.DataConfigs) {
 }
 
 func (r *redis) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	values = values[:testCfg.Load]
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -145,6 +146,10 @@ func (r *redis) BenchmarkRead(values [][]string, dataCfg domain.DataConfigs, tes
 }
 
 func (r *redis) BenchmarkWrite(values [][]string, dataCfg domain.DataConfigs, testCfg domain.TestConfigs) {
+	if len(testCfg.TxSizes) == 0 {
+		values = values[:testCfg.Load]
+	}
+
 	var aggrLatencyMicSec, success uint64
 	wg := &sync.WaitGroup{}
 	ctx := traceableContext.WithUUID(uuid.New())
@@ -180,6 +185,10 @@ func (r *redis) getData(values [][]string, dataCfg domain.DataConfigs, testCfg d
 	// if tx sizes are provided, filter the inputs
 	if len(testCfg.TxSizes) != 0 {
 		for _, val := range values {
+			if len(rValues) == testCfg.Load {
+				return
+			}
+
 			d = data{body: val}
 			dataSize := len(d.Str())
 

@@ -33,10 +33,10 @@ func main() {
 
 	switch testCfg.Typ {
 	case domain.BenchmarkRead:
-		db.BenchmarkRead(values[:testCfg.Load], dataCfg, testCfg)
+		db.BenchmarkRead(values, dataCfg, testCfg)
 	case domain.BenchmarkWrite:
-		db.BenchmarkWrite(values[:testCfg.Load], dataCfg, testCfg)
+		db.BenchmarkWrite(values, dataCfg, testCfg)
 	case domain.BenchmarkUpdate:
-		db.BenchmarkWrite(values[:testCfg.Load], dataCfg, testCfg)
+		db.BenchmarkWrite(values, dataCfg, testCfg)
 	}
 }
